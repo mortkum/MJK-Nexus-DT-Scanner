@@ -6,3 +6,5 @@ dist/
 uploads/
 coverage/
 .nyc_output/
+.npm/
+uploads/

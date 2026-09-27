@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ Nexus DT/DB Institutional Scanner</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">⚡</span>
+      <div>
+        <h1>NEXUS DT/DB</h1>
+        <p>Top-Down Institutional Scanner • W1 D1 H4 H2 H1 M15</p>
+      </div>
+    </div>
+    <div class="broker-switcher">
+      <button class="broker-btn active" data-broker="main">MAIN HUB (51)</button>
+      <button class="broker-btn" data-broker="weltrade">WELTRADE (20)</button>
+      <button class="broker-btn" data-broker="deriv">DERIV (14)</button>
+    </div>
+    <div class="actions">
+      <button id="scanBtn" class="primary">🔍 SCAN MARKET</button>
+      <button id="highProbBtn" class="ghost">🌟 HIGH PROB ONLY</button>
+    </div>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat"><span>Broker:</span><b id="statBroker">Main</b></div>
+    <div class="stat"><span>Scanned:</span><b id="statCount">0</b></div>
+    <div class="stat"><span>Patterns:</span><b id="statPatterns">0</b></div>
+    <div class="stat"><span>High Prob:</span><b id="statHigh">0</b></div>
+    <div class="stat"><span>Last Scan:</span><b id="statTime">Never</b></div>
+    <div class="stat right">
+      <span>Audio</span><label class="switch"><input type="checkbox" id="audioToggle" checked><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <aside class="panel left">
+      <div class="panel-head">
+        <h3>📡 Radar Results</h3>
+        <div class="filters">
+          <input id="searchInput" placeholder="Search symbol..." />
+        </div>
+      </div>
+      <div id="resultsList" class="results-list">
+        <div class="empty">Click SCAN MARKET to start top-down scan across 6 timeframes...</div>
+      </div>
+    </aside>
+
+    <section class="center">
+      <div class="chart-header">
+        <div>
+          <h2 id="chartSymbol">Select a symbol</h2>
+          <p id="chartInfo">No pattern selected</p>
+        </div>
+        <div class="tf-switcher" id="tfSwitcher">
+          <button data-tf="W1">W1</button>
+          <button data-tf="D1">D1</button>
+          <button data-tf="H4">H4</button>
+          <button data-tf="H2" class="active">H2</button>
+          <button data-tf="H1">H1</button>
+          <button data-tf="M15">M15</button>
+        </div>
+      </div>
+      <div id="chartContainer" class="chart-container"></div>
+      <div class="chart-footer">
+        <div class="legend">
+          <span class="dot red"></span> Double Top
+          <span class="dot green"></span> Double Bottom
+          <span class="dot yellow"></span> Neckline
+          <span class="dot cyan"></span> Entry/SL/TP
+        </div>
+        <div class="calc" id="calcBox">
+          <b>Position Calculator:</b>
+          Balance <input id="calcBalance" value="10000" style="width:80px"> Risk% <input id="calcRisk" value="1" style="width:40px">
+          <span id="calcResult">Lot: - | $Risk: -</span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel right">
+      <div class="panel-head"><h3>🔎 Setup Inspector</h3></div>
+      <div id="inspector" class="inspector">
+        <div class="empty">Select a pattern to inspect confluences, geometry, and top-down isolation</div>
+      </div>
+      <div class="panel-head"><h3>📋 Trade Plan</h3></div>
+      <div id="tradePlan" class="trade-plan"></div>
+      <div class="code-hub">
+        <h3>💻 Code Hub</h3>
+        <button id="pineBtn">Copy Pine Script v5</button>
+        <button id="mql5Btn">Copy MQL5 EA</button>
+        <button id="webhookBtn">Copy Webhook JSON</button>
+        <pre id="codePreview"></pre>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="footer">
+    <span>⚡ Nexus Institutional Scanner • Hidden Single-TF = 76.4% Win Rate • Retail Multi-TF = 46.1% Trap</span>
+    <span><a href="/api/backtest-stats" target="_blank">Backtest Stats</a> • <a href="/api/watchlist" target="_blank">Watchlist API</a></span>
+  </footer>
+</div>
+
+<div id="toast"></div>
+<script src="chart-engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

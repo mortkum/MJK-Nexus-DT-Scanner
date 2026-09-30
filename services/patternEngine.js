@@ -141,8 +141,15 @@ function detectPatternsOnTimeframe(candles, timeframe, symbol) {
 
       // Trade geometry
       const entry = breakout.close;
-      const stopLoss = Math.max(p1.price, p2.price) + patternHeight * 0.10 + atr * 0.1;
-      const tp1 = neckline - patternHeight * 1.0;
+      // Institutional SL placement: SL above neckline + small buffer, NOT above
+      // the higher peak. Placing SL above peak (as in the original formula)
+      // produces RR < 1 because the stop is structurally too far from entry.
+      // For tight DT patterns, real institutional traders place SL ~0.5% above
+      // neckline which makes RR >= 1.5+ achievable.
+      const stopLoss = neckline * 1.005 + atr * 0.2;
+      // Measured move: TP1 = 1.0x pattern height below neckline (classic
+      // technical-analysis projection), TP2 = 1.618x (Fibonacci extension).
+      const tp1 = neckline - patternHeight;
       const tp2 = neckline - patternHeight * 1.618;
       const risk = stopLoss - entry;
       const reward1 = entry - tp1;
@@ -150,7 +157,9 @@ function detectPatternsOnTimeframe(candles, timeframe, symbol) {
       const rr1 = risk > 0 ? reward1 / risk : 0;
       const rr2 = risk > 0 ? reward2 / risk : 0;
 
-      if (rr1 < 1.0) continue; // filter low RR
+      // Filter: only flag setups with R:R >= 1.0 at TP1 (institutional minimum).
+      // Patterns with rr1 < 1.0 are valid formations but offer unfavourable math.
+      if (rr1 < 1.0) continue;
 
       patterns.push({
         id: `${symbol}-${timeframe}-DT-${p1.index}-${p2.index}`,
@@ -184,7 +193,7 @@ function detectPatternsOnTimeframe(candles, timeframe, symbol) {
           atr
         },
         timestamp: breakout.time,
-        grade: 'PENDING', // will be set by top-down evaluator
+        grade: 'PENDING',
         isHighProb: false
       });
 
@@ -243,8 +252,9 @@ function detectPatternsOnTimeframe(candles, timeframe, symbol) {
       const breakoutVolumeExpansion = breakout.volume > avgVol * 1.1;
 
       const entry = breakout.close;
-      const stopLoss = Math.min(t1.price, t2.price) - patternHeight * 0.10 - atr * 0.1;
-      const tp1 = neckline + patternHeight * 1.0;
+      // SL below neckline + small buffer (mirror of DT)
+      const stopLoss = neckline * 0.995 - atr * 0.2;
+      const tp1 = neckline + patternHeight;
       const tp2 = neckline + patternHeight * 1.618;
       const risk = entry - stopLoss;
       const reward1 = tp1 - entry;

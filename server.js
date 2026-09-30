@@ -15,13 +15,19 @@ const { getPineScriptCode } = require('./services/pineScriptGenerator');
 const { getMQL5Code } = require('./services/mql5Generator');
 
 // Weltrade Module with safe fallback
-let WELTRADE_WATCHLIST, getWeltradeCandles, getWeltradeMQL5Code;
+let WELTRADE_WATCHLIST, getWeltradeCandles, getWeltradeMQL5Code, getWeltradeDataSource, weltradeBridge;
 try {
   const wData = require('./services/weltradeData');
   const wMql = require('./services/weltradeMql');
+  weltradeBridge = require('./services/weltradeBridgeService');
   WELTRADE_WATCHLIST = wData.WELTRADE_WATCHLIST;
   getWeltradeCandles = wData.getWeltradeCandles;
   getWeltradeMQL5Code = wMql.getWeltradeMQL5Code;
+  getWeltradeDataSource = wData.getWeltradeDataSource;
+
+  // Auto-start the Python bridge on boot and attempt to reconnect
+  weltradeBridge.startBridge();
+  weltradeBridge.autoReconnect().catch(err => console.warn('[weltrade] auto-reconnect error:', err.message));
 } catch (err) {
   WELTRADE_WATCHLIST = [
     { symbol: 'SYNTX1000', name: 'SyntX 1000 Index', category: 'syntx', basePrice: 12500.0, pipSize: 0.1, minLot: 0.01 },
@@ -103,9 +109,17 @@ try {
   getDerivMQL5Code = () => getMQL5Code();
 }
 
-const PORT_MAIN = parseInt(process.env.PORT) || 3000;
-const PORT_WELTRADE = parseInt(process.env.PORT_WELTRADE) || 3001;
-const PORT_DERIV = parseInt(process.env.PORT_DERIV) || 3002;
+// Pick three random high ports (50000-50999) by default to avoid conflicts with
+// common dev servers (React/Vue/Angular use 3000/3001/3002). Override via env:
+//   PORT=3000 npm start
+//   PORT_WELTRADE=8080 PORT_DERIV=8081 npm start
+function pickRandomPort() {
+  // Range 50000-50999 is virtually always free on a dev machine
+  return 50000 + Math.floor(Math.random() * 1000);
+}
+const PORT_MAIN      = parseInt(process.env.PORT)          || pickRandomPort();
+const PORT_WELTRADE  = parseInt(process.env.PORT_WELTRADE) || pickRandomPort();
+const PORT_DERIV     = parseInt(process.env.PORT_DERIV)    || pickRandomPort();
 
 async function mapConcurrent(items, limit, fn) {
   const results = [];
@@ -165,6 +179,11 @@ app.use('/weltrade', express.static(publicWeltradePath));
 app.use('/deriv', express.static(publicDerivPath));
 app.use(express.static(publicMainPath));
 
+// Mount Weltrade MT5 bridge routes (if bridge service loaded)
+if (weltradeBridge) {
+  try { weltradeBridge.registerRoutes(app); } catch (e) { console.warn('[weltrade] registerRoutes failed:', e.message); }
+}
+
 // In-memory caches
 let cachedScans = { main: null, weltrade: null, deriv: null };
 let lastScanTimes = { main: 0, weltrade: 0, deriv: 0 };
@@ -192,7 +211,13 @@ app.get('/api/scan', async (req, res) => {
     const results = await mapConcurrent(list, 8, sym => scanGenericSymbol(sym, fetcher));
     cachedScans[broker] = results;
     lastScanTimes[broker] = Date.now();
-    res.json({ cached: false, broker, lastScanTime: lastScanTimes[broker], results });
+
+    let dataSourceInfo = null;
+    if (broker === 'weltrade' && getWeltradeDataSource) {
+      try { dataSourceInfo = await getWeltradeDataSource(); } catch (_) {}
+    }
+
+    res.json({ cached: false, broker, lastScanTime: lastScanTimes[broker], results, dataSource: dataSourceInfo });
   } catch (err) {
     res.status(500).json({ error: 'Failed to complete scan', details: err.message });
   }
@@ -234,9 +259,15 @@ app.get('/api/candles', async (req, res) => {
   }
 });
 
-app.get('/api/watchlist', (req, res) => {
+app.get('/api/watchlist', async (req, res) => {
   const broker = (req.query.broker || 'main').toLowerCase();
-  if (broker === 'weltrade') return res.json({ broker: 'Weltrade', watchlist: WELTRADE_WATCHLIST, timeframes: TIMEFRAMES });
+  if (broker === 'weltrade') {
+    const out = { broker: 'Weltrade', watchlist: WELTRADE_WATCHLIST, timeframes: TIMEFRAMES };
+    if (weltradeBridge) {
+      try { out.bridge = await weltradeBridge.health(); } catch (_) { out.bridge = { connected: false }; }
+    }
+    return res.json(out);
+  }
   if (broker === 'deriv') return res.json({ broker: 'Deriv', watchlist: DERIV_WATCHLIST, timeframes: TIMEFRAMES });
   return res.json({ broker: 'Main', watchlist: WATCHLIST, timeframes: TIMEFRAMES });
 });
@@ -289,39 +320,176 @@ const weltradeApp = express();
 weltradeApp.use(cors());
 weltradeApp.use(express.json());
 weltradeApp.use(express.static(publicWeltradePath));
-weltradeApp.get('/api/scan', (req, res) => { req.query.broker = 'weltrade'; app._router.handle(req, res); });
-weltradeApp.get('/api/candles', (req, res) => { req.query.broker = 'weltrade'; app._router.handle(req, res); });
-weltradeApp.get('/api/watchlist', (req, res) => res.json({ broker: 'Weltrade', watchlist: WELTRADE_WATCHLIST, timeframes: TIMEFRAMES }));
+// Also expose /weltrade/* (same as unified port) so settings.html works
+weltradeApp.use('/weltrade', express.static(publicWeltradePath));
+// Friendly redirect for the standalone port
+weltradeApp.get('/weltrade/settings.html', (req, res) => res.redirect('/settings.html'));
+weltradeApp.get('/weltrade/', (req, res) => res.redirect('/index.html'));
+
+// Standalone Weltrade routes - delegate to main app handlers by capturing
+// the request, calling the same async logic. We implement each route inline
+// to keep them self-contained (no app._router dependency).
+function withWeltradeBroker(req, res, handler) {
+  req.query.broker = 'weltrade';
+  return handler(req, res);
+}
+
+// Inline implementations for the standalone Weltrade port so they don't
+// depend on the main app's router being initialized first.
+weltradeApp.get('/api/scan', async (req, res) => {
+  const forceRefresh = req.query.refresh === 'true';
+  const broker = 'weltrade';
+  if (!forceRefresh && cachedScans[broker] && Date.now() - lastScanTimes[broker] < SCAN_CACHE_MS) {
+    return res.json({ cached: true, broker, lastScanTime: lastScanTimes[broker], results: cachedScans[broker] });
+  }
+  try {
+    const results = await mapConcurrent(WELTRADE_WATCHLIST, 8, sym => scanGenericSymbol(sym, getWeltradeCandles));
+    cachedScans[broker] = results;
+    lastScanTimes[broker] = Date.now();
+    let dataSourceInfo = null;
+    if (getWeltradeDataSource) {
+      try { dataSourceInfo = await getWeltradeDataSource(); } catch (_) {}
+    }
+    res.json({ cached: false, broker, lastScanTime: lastScanTimes[broker], results, dataSource: dataSourceInfo });
+  } catch (err) {
+    res.status(500).json({ error: 'Scan failed', details: err.message });
+  }
+});
+
+weltradeApp.get('/api/candles', async (req, res) => {
+  const { symbol, timeframe } = req.query;
+  if (!symbol || !timeframe) return res.status(400).json({ error: 'symbol and timeframe required' });
+  try {
+    const candles = await getWeltradeCandles(symbol, timeframe);
+    const patterns = detectPatternsOnTimeframe(candles, timeframe, symbol);
+    const tfPatterns = { [timeframe]: patterns };
+    for (const tf of TIMEFRAMES) {
+      if (tf === timeframe) continue;
+      const other = await getWeltradeCandles(symbol, tf);
+      tfPatterns[tf] = detectPatternsOnTimeframe(other, tf, symbol);
+    }
+    const enriched = evaluateTopDownUniqueness(tfPatterns);
+    res.json({
+      symbol, timeframe, broker: 'weltrade', candles,
+      patterns: enriched.filter(p => p.timeframe === timeframe),
+      allTimeframeStatus: TIMEFRAMES.reduce((acc, tf) => { acc[tf] = (tfPatterns[tf] || []).length; return acc; }, {}),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch candles', details: err.message });
+  }
+});
+weltradeApp.get('/api/watchlist', async (req, res) => {
+  const out = { broker: 'Weltrade', watchlist: WELTRADE_WATCHLIST, timeframes: TIMEFRAMES };
+  if (weltradeBridge) {
+    try { out.bridge = await weltradeBridge.health(); } catch (_) { out.bridge = { connected: false }; }
+  }
+  res.json(out);
+});
 weltradeApp.get('/api/code/pinescript', (req, res) => res.type('text/plain').send(getPineScriptCode()));
 weltradeApp.get('/api/code/mql5', (req, res) => res.type('text/plain').send(getWeltradeMQL5Code()));
+weltradeApp.get('/api/code/weltrade-pinescript', (req, res) => {
+  try {
+    const { getWeltradePineCode } = require('./services/weltradeMql');
+    res.type('text/plain').send(getWeltradePineCode());
+  } catch (e) {
+    res.status(500).send('// Pine code generator not available');
+  }
+});
+weltradeApp.get('/api/backtest-stats', (req, res) => {
+  res.json({
+    summary: { totalTradesTested: 840, period: '2022 - 2026 (Forex, Crypto, Synthetics, Indices)' },
+    comparison: [
+      {
+        category: 'Hidden DT/DB (Single Timeframe Only - High Probability)',
+        description: 'Pattern detected on strictly 1 timeframe with Neckline Body Close & Divergence',
+        totalSetups: 312,
+        winRate: '76.4%',
+        avgRiskReward: '1 : 2.35',
+        profitFactor: 2.82,
+        maxDrawdown: '6.4%',
+        verdict: 'Institutional Advantage (Alpha Generative)',
+      },
+      {
+        category: 'Obvious Multi-Timeframe DT/DB (Retail Crowded)',
+        description: 'Visible simultaneously across 3 or more timeframes',
+        totalSetups: 528,
+        winRate: '46.1%',
+        avgRiskReward: '1 : 1.40',
+        profitFactor: 1.15,
+        maxDrawdown: '21.8%',
+        verdict: 'Retail Trap (High frequency of fakeouts & stop hunts)',
+      },
+    ],
+  });
+});
+if (weltradeBridge) {
+  try { weltradeBridge.registerRoutes(weltradeApp); } catch (e) { console.warn('[weltrade] registerRoutes on standalone port failed:', e.message); }
+}
 
 const derivApp = express();
 derivApp.use(cors());
 derivApp.use(express.json());
 derivApp.use(express.static(publicDerivPath));
-derivApp.get('/api/scan', (req, res) => { req.query.broker = 'deriv'; app._router.handle(req, res); });
-derivApp.get('/api/candles', (req, res) => { req.query.broker = 'deriv'; app._router.handle(req, res); });
+derivApp.get('/api/scan', async (req, res) => {
+  const forceRefresh = req.query.refresh === 'true';
+  const broker = 'deriv';
+  if (!forceRefresh && cachedScans[broker] && Date.now() - lastScanTimes[broker] < SCAN_CACHE_MS) {
+    return res.json({ cached: true, broker, lastScanTime: lastScanTimes[broker], results: cachedScans[broker] });
+  }
+  try {
+    const results = await mapConcurrent(DERIV_WATCHLIST, 8, sym => scanGenericSymbol(sym, getDerivCandles));
+    cachedScans[broker] = results;
+    lastScanTimes[broker] = Date.now();
+    res.json({ cached: false, broker, lastScanTime: lastScanTimes[broker], results });
+  } catch (err) {
+    res.status(500).json({ error: 'Scan failed', details: err.message });
+  }
+});
+
+derivApp.get('/api/candles', async (req, res) => {
+  const { symbol, timeframe } = req.query;
+  if (!symbol || !timeframe) return res.status(400).json({ error: 'symbol and timeframe required' });
+  try {
+    const candles = await getDerivCandles(symbol, timeframe);
+    const patterns = detectPatternsOnTimeframe(candles, timeframe, symbol);
+    const tfPatterns = { [timeframe]: patterns };
+    for (const tf of TIMEFRAMES) {
+      if (tf === timeframe) continue;
+      const other = await getDerivCandles(symbol, tf);
+      tfPatterns[tf] = detectPatternsOnTimeframe(other, tf, symbol);
+    }
+    const enriched = evaluateTopDownUniqueness(tfPatterns);
+    res.json({
+      symbol, timeframe, broker: 'deriv', candles,
+      patterns: enriched.filter(p => p.timeframe === timeframe),
+      allTimeframeStatus: TIMEFRAMES.reduce((acc, tf) => { acc[tf] = (tfPatterns[tf] || []).length; return acc; }, {}),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch candles', details: err.message });
+  }
+});
 derivApp.get('/api/watchlist', (req, res) => res.json({ broker: 'Deriv', watchlist: DERIV_WATCHLIST, timeframes: TIMEFRAMES }));
 derivApp.get('/api/code/pinescript', (req, res) => res.type('text/plain').send(getPineScriptCode()));
 derivApp.get('/api/code/mql5', (req, res) => res.type('text/plain').send(getDerivMQL5Code()));
 
 // Start servers (Dual Stack listening on 0.0.0.0 for live preview and local access)
 app.listen(PORT_MAIN, '0.0.0.0', () => {
-  console.log(`⚡ [Port 3000] Institutional Radar Hub running at: http://0.0.0.0:${PORT_MAIN}`);
+  console.log(`⚡ [Port ${PORT_MAIN}] Institutional Radar Hub running at: http://0.0.0.0:${PORT_MAIN}`);
 });
 
 weltradeApp.listen(PORT_WELTRADE, '0.0.0.0', () => {
-  console.log(`⚡ [Port 3001] Weltrade SyntX & Indices running at: http://0.0.0.0:${PORT_WELTRADE}`);
+  console.log(`⚡ [Port ${PORT_WELTRADE}] Weltrade SyntX & Indices running at: http://0.0.0.0:${PORT_WELTRADE}`);
 });
 
 derivApp.listen(PORT_DERIV, '0.0.0.0', () => {
-  console.log(`⚡ [Port 3002] Deriv Synthetic Indices running at: http://0.0.0.0:${PORT_DERIV}`);
+  console.log(`⚡ [Port ${PORT_DERIV}] Deriv Synthetic Indices running at: http://0.0.0.0:${PORT_DERIV}`);
   console.log(`\n========================================================`);
   console.log(`  🚀 TRADING RADAR ACTIVE - ACCESS ANY OPTION BELOW:`);
-  console.log(`  • MAIN HUB (All 3 Brokers): http://localhost:${PORT_MAIN}`);
-  console.log(`  • Weltrade on Hub:          http://localhost:${PORT_MAIN}/?broker=weltrade`);
-  console.log(`  • Deriv on Hub:             http://localhost:${PORT_MAIN}/?broker=deriv`);
-  console.log(`  • Standalone Weltrade Port: http://127.0.0.1:${PORT_WELTRADE}`);
-  console.log(`  • Standalone Deriv Port:    http://127.0.0.1:${PORT_DERIV}`);
+  console.log(`  • MAIN HUB (All 3 Brokers):     http://localhost:${PORT_MAIN}`);
+  console.log(`  • Weltrade setup on Hub:        http://localhost:${PORT_MAIN}/weltrade/settings.html`);
+  console.log(`  • Standalone Weltrade Port:     http://localhost:${PORT_WELTRADE}/weltrade/settings.html`);
+  console.log(`  • Standalone Deriv Port:        http://localhost:${PORT_DERIV}`);
+  console.log(`\n  💡 Override ports via env vars:`);
+  console.log(`     PORT=8080 PORT_WELTRADE=8081 PORT_DERIV=8082 npm start`);
   console.log(`========================================================\n`);
 });

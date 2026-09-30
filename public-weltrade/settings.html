@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=devicewidth, initial-scale=1.0">
+  <title>⚙️ Weltrade MT5 Connection Setup</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .setup-shell {
+      max-width: 920px;
+      margin: 24px auto;
+      padding: 24px;
+    }
+    .setup-card {
+      background: #0e1424;
+      border: 1px solid #1f2a44;
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .setup-card h2 { margin-top: 0; color: #5ce4ff; font-size: 18px; }
+    .setup-card h3 { color: #ffd166; font-size: 14px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .8px; }
+    .form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .form-row label { display: flex; flex-direction: column; flex: 1; min-width: 180px; font-size: 12px; color: #a0aec0; }
+    .form-row input, .form-row select {
+      background: #0a0f1f; color: #f6f9ff; border: 1px solid #2a3756; border-radius: 6px;
+      padding: 10px 12px; font-size: 14px; margin-top: 4px; outline: none;
+    }
+    .form-row input:focus, .form-row select:focus { border-color: #5ce4ff; }
+    .pill { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .pill.green { background: rgba(34,197,94,0.18); color: #4ade80; }
+    .pill.amber { background: rgba(245,158,11,0.18); color: #fbbf24; }
+    .pill.red   { background: rgba(239,68,68,0.18);  color: #f87171; }
+    .pill.gray  { background: rgba(148,163,184,0.18); color: #94a3b8; }
+    pre.steps { background: #050911; border: 1px solid #1f2a44; border-radius: 8px; padding: 14px; color: #cbd5e0; font-size: 12px; overflow-x: auto; }
+    pre.steps code { color: #5ce4ff; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .btn-row button { background: #5ce4ff; color: #0a0f1f; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-row button.ghost { background: transparent; color: #5ce4ff; border: 1px solid #5ce4ff; }
+    .btn-row button.danger { background: #ef4444; color: #fff; }
+    .toast-area { position: fixed; top: 16px; right: 16px; z-index: 9999; }
+    .toast {
+      background: #0e1424; border: 1px solid #5ce4ff; border-radius: 8px;
+      padding: 12px 16px; color: #f6f9ff; margin-bottom: 8px; max-width: 360px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .toast.error { border-color: #ef4444; }
+    .toast.success { border-color: #22c55e; }
+    .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 12px; }
+    .status-cell { background: #050911; border: 1px solid #1f2a44; border-radius: 8px; padding: 12px; }
+    .status-cell .lbl { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .8px; }
+    .status-cell .val { font-size: 18px; font-weight: 600; color: #f6f9ff; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="setup-shell">
+    <header style="margin-bottom: 18px;">
+      <a href="/" style="color: #5ce4ff; text-decoration: none; font-size: 13px;">← Back to Scanner</a>
+      <h1 style="margin: 8px 0 4px 0; font-size: 26px; color: #f6f9ff;">⚙️ Weltrade MT5 Connection Setup</h1>
+      <p style="color: #94a3b8; margin: 0;">
+        Connect the web scanner to your live Weltrade MetaTrader 5 terminal for
+        real-time SyntX, FXvol, Volatility, Crash/Boom, PainX, GainX, Regime,
+        Indices, Forex, Metals, and Crypto data.
+      </p>
+    </header>
+
+    <!-- Status -->
+    <div class="setup-card">
+      <h2>📊 Connection Status</h2>
+      <div id="statusRow"></div>
+      <div class="status-grid" id="statusGrid"></div>
+    </div>
+
+    <!-- Credentials form -->
+    <div class="setup-card">
+      <h2>🔐 Weltrade MT5 Credentials</h2>
+      <p style="color: #94a3b8; font-size: 13px;">
+        These credentials are stored locally in <code>~/.weltrade-credentials.json</code>
+        and used only to connect to your local MT5 terminal. They never leave your machine.
+      </p>
+      <form id="connectForm" onsubmit="return false;">
+        <div class="form-row">
+          <label>MT5 Account Number
+            <input id="login" type="text" placeholder="e.g. 34379046" autocomplete="off">
+          </label>
+          <label>Server
+            <select id="server">
+              <option value="Weltrade-Real">Weltrade-Real (Real / Live)</option>
+              <option value="Weltrade-Live">Weltrade-Live (Live)</option>
+              <option value="Weltrade-Demo">Weltrade-Demo (Practice)</option>
+              <option value="Weltrade-Pro">Weltrade-Pro</option>
+              <option value="Weltrade-Islamic">Weltrade-Islamic (Swap-Free)</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Password
+            <input id="password" type="password" placeholder="Your MT5 password" autocomplete="off">
+          </label>
+          <label>MT5 Terminal Path <span style="color:#64748b;">(optional)</span>
+            <input id="path" type="text" placeholder="C:\Program Files\Weltrade MetaTrader 5\terminal64.exe">
+          </label>
+        </div>
+      <div class="btn-row">
+        <button id="connectBtn">🔌 Connect to MT5</button>
+        <button id="autoDetectBtn" class="ghost">🔍 Auto-Detect From Open MT5</button>
+        <button id="disconnectBtn" class="danger">⏹ Disconnect</button>
+        <button id="forgetBtn" class="ghost">🗑 Forget Saved Credentials</button>
+      </div>
+      <div id="autoDetectResult" style="margin-top: 10px; font-size: 13px;"></div>
+      </form>
+    </div>
+
+    <!-- Step by step -->
+    <div class="setup-card">
+      <h2>🛠 Step-by-Step Installation</h2>
+      <h3>1. Install Python + MetaTrader5 package</h3>
+<pre class="steps"># Windows / macOS / Linux
+pip install MetaTrader5 flask flask-cors pandas numpy
+
+# (Linux users also need to install Wine, since MT5 is Windows-only)
+# Ubuntu example:
+sudo apt-get install -y wine64
+</pre>
+
+      <h3>2. Install the Weltrade MT5 Terminal</h3>
+<pre class="steps">Download the official Weltrade MT5 installer from:
+<a href="https://weltrade.com/platforms/metatrader5" target="_blank" style="color:#5ce4ff">https://weltrade.com/platforms/metatrader5</a>
+
+During install, log into your Weltrade account. Make sure
+all your desired symbols (SyntX, FXvol, Volatility, Crash/Boom,
+PainX, GainX, US30, NAS100, EURUSD, XAUUSD, etc.) are visible
+in Market Watch (right-click → Show All).
+</pre>
+
+      <h3>3. Start the Python Bridge</h3>
+<pre class="steps"># From the project root:
+python weltrade_mt5_bridge.py
+
+# (It listens on http://localhost:5555)
+</pre>
+
+      <h3>4. Connect the Web Scanner</h3>
+<pre class="steps">Click <b>Connect to MT5</b> above and enter your Weltrade credentials.
+The scanner will automatically pull real OHLCV data from your MT5.
+
+If you prefer, use the standalone MQL5 EA below - it runs natively
+inside MT5 and is even faster (no HTTP round-trip):
+</pre>
+
+      <div class="btn-row">
+        <button id="downloadMqlBtn">⬇️ Download MQL5 EA (.mq5)</button>
+        <button id="downloadPineBtn" class="ghost">⬇️ Download Pine Script v5</button>
+      </div>
+      <p style="color:#94a3b8; font-size:12px; margin-top:8px;">
+        Install: copy the <code>.mq5</code> file to <code>MQL5/Experts/</code> inside your
+        MT5 data folder, then drag it onto any chart. Press <code>S</code> on the chart
+        to trigger a manual scan.
+      </p>
+    </div>
+
+    <!-- Troubleshooting -->
+    <div class="setup-card">
+      <h2>❓ Troubleshooting</h2>
+      <h3>"Initialize failed" / "MT5 initialization error"</h3>
+      <p style="font-size:13px; color:#cbd5e0;">
+        Weltrade MT5 must be installed in its default location, or you must
+        supply the full path in the form above. Open MT5 at least once and
+        log into your account so credentials are cached.
+      </p>
+      <h3>"Login failed: invalid account"</h3>
+      <p style="font-size:13px; color:#cbd5e0;">
+        Verify the server name matches your account. Most Weltrade accounts
+        use <code>Weltrade-Live</code> or <code>Weltrade-Demo</code>. Open MT5 →
+        File → Login to confirm.
+      </p>
+      <h3>"Symbol not found" / missing volatility indices</h3>
+      <p style="font-size:13px; color:#cbd5e0;">
+        Open MT5 → right-click Market Watch → "Show All". Different Weltrade
+        account types (Standard, Pro, SyntX) carry different symbols.
+      </p>
+      <h3>Bridge can't connect to Python</h3>
+      <p style="font-size:13px; color:#cbd5e0;">
+        Make sure <code>weltrade_mt5_bridge.py</code> is running. The Node
+        server auto-spawns it on startup, but you can run it manually for
+        easier debugging.
+      </p>
+    </div>
+  </div>
+
+  <div class="toast-area" id="toasts"></div>
+
+  <script src="settings.js"></script>
+</body>
+</html>

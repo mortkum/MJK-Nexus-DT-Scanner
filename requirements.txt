@@ -1,0 +1,13 @@
+# Weltrade MT5 Bridge - Python Dependencies
+# Install with:  pip install -r requirements.txt
+
+# Core MT5 binding (requires Weltrade-branded MT5 terminal installed)
+MetaTrader5>=5.0.45
+
+# Local HTTP server for the Node <-> Python bridge
+Flask>=2.3.0
+flask-cors>=4.0.0
+
+# Data handling
+pandas>=2.0.0
+numpy>=1.24.0

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚡ Nexus DT/DB Institutional Scanner</title>
+<title>⚡ Nexus Weltrade Scanner</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
 </head>
@@ -13,23 +13,30 @@
     <div class="brand">
       <span class="logo">⚡</span>
       <div>
-        <h1>NEXUS DT/DB</h1>
-        <p>Top-Down Institutional Scanner • W1 D1 H4 H2 H1 M15</p>
+        <h1>NEXUS Weltrade</h1>
+        <p>Live MT5 Scanner • Hidden Double Top / Bottom • 6 Timeframes</p>
       </div>
     </div>
     <div class="broker-switcher">
-      <button class="broker-btn active" data-broker="main">MAIN HUB (51)</button>
-      <button class="broker-btn" data-broker="weltrade">WELTRADE (20)</button>
+      <button class="broker-btn" data-broker="main">MAIN HUB (51)</button>
+      <button class="broker-btn active" data-broker="weltrade">WELTRADE (66)</button>
       <button class="broker-btn" data-broker="deriv">DERIV (14)</button>
     </div>
     <div class="actions">
       <button id="scanBtn" class="primary">🔍 SCAN MARKET</button>
       <button id="highProbBtn" class="ghost">🌟 HIGH PROB ONLY</button>
+      <a href="/weltrade/settings.html" class="ghost" style="text-decoration:none; padding:10px 14px; border-radius:8px; border:1px solid #5ce4ff; color:#5ce4ff; font-weight:600; font-size:13px;">⚙️ MT5 SETUP</a>
     </div>
   </header>
 
+  <!-- Data source banner -->
+  <div id="dataSourceBanner" class="data-source-banner">
+    <span class="ds-pill">⚪ Initializing…</span>
+    <span class="ds-detail"></span>
+  </div>
+
   <div class="stats-bar">
-    <div class="stat"><span>Broker:</span><b id="statBroker">Main</b></div>
+    <div class="stat"><span>Broker:</span><b id="statBroker">Weltrade</b></div>
     <div class="stat"><span>Scanned:</span><b id="statCount">0</b></div>
     <div class="stat"><span>Patterns:</span><b id="statPatterns">0</b></div>
     <div class="stat"><span>High Prob:</span><b id="statHigh">0</b></div>
@@ -44,11 +51,11 @@
       <div class="panel-head">
         <h3>📡 Radar Results</h3>
         <div class="filters">
-          <input id="searchInput" placeholder="Search symbol..." />
+          <input id="searchInput" placeholder="Search symbol (e.g. SYNTX1000, Volatility 75)..." />
         </div>
       </div>
       <div id="resultsList" class="results-list">
-        <div class="empty">Click SCAN MARKET to start top-down scan across 6 timeframes...</div>
+        <div class="empty">Click <b>SCAN MARKET</b> to start. Make sure your MT5 is connected in <a href="/weltrade/settings.html" style="color:#5ce4ff">Settings</a> for live data.</div>
       </div>
     </aside>
 
@@ -101,8 +108,8 @@
   </div>
 
   <footer class="footer">
-    <span>⚡ Nexus Institutional Scanner • Hidden Single-TF = 76.4% Win Rate • Retail Multi-TF = 46.1% Trap</span>
-    <span><a href="/api/backtest-stats" target="_blank">Backtest Stats</a> • <a href="/api/watchlist" target="_blank">Watchlist API</a></span>
+    <span>⚡ Nexus Weltrade Scanner • Hidden Single-TF = 76.4% Win Rate • Retail Multi-TF = 46.1% Trap</span>
+    <span><a href="/weltrade/settings.html">⚙️ MT5 Setup</a> • <a href="/api/backtest-stats" target="_blank">Backtest Stats</a> • <a href="/api/weltrade/bridge/health" target="_blank">Bridge Health</a></span>
   </footer>
 </div>
 

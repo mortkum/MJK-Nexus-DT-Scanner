@@ -8,3 +8,14 @@ coverage/
 .nyc_output/
 .npm/
 uploads/
+
+# Python bridge artifacts
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+weltrade_mt5_bridge.log
+
+# Local MT5 credentials (never commit!)
+.weltrade-credentials.json
+mt5_*.log

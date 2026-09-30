@@ -7,6 +7,7 @@ class ChartEngine {
     this.volumeSeries = null;
     this.markers = [];
     this.lines = [];
+    this.priceLines = [];
     this.resizeObserver = null;
     this.init();
   }
@@ -43,7 +44,16 @@ class ChartEngine {
 
   setData(candles, patterns = []) {
     if (!candles || candles.length === 0) return;
+    console.log('[chart-engine] setData called with', candles.length, 'candles, first close:', candles[0]?.close, 'last close:', candles[candles.length-1]?.close, 'patterns:', patterns.length);
     if (this.candleSeries) {
+      // Clear old price lines from previous loads
+      if (this.priceLines && this.priceLines.length) {
+        this.priceLines.forEach(pl => {
+          try { this.candleSeries.removePriceLine(pl); } catch(e) {}
+        });
+      }
+      this.priceLines = [];
+
       const candleData = candles.map(c => ({
         time: c.time,
         open: c.open, high: c.high, low: c.low, close: c.close
@@ -54,6 +64,8 @@ class ChartEngine {
       this.candleSeries.setData(candleData);
       this.volumeSeries.setData(volumeData);
       this.chart.timeScale().fitContent();
+      // Auto-scale price axis to fit all visible data + price lines
+      this.chart.priceScale('right').applyOptions({ autoScale: true, scaleMargins: { top: 0.05, bottom: 0.05 } });
 
       // Clear old markers/lines
       this.candleSeries.setMarkers([]);
@@ -73,11 +85,11 @@ class ChartEngine {
 
         // Price lines for entry/SL/TP
         try {
-          this.candleSeries.createPriceLine({ price: p.neckline, color: '#ffd600', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'NECKLINE' });
-          this.candleSeries.createPriceLine({ price: p.entry, color: '#00e5ff', lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: 'ENTRY' });
-          this.candleSeries.createPriceLine({ price: p.stopLoss, color: '#ff3d57', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'SL' });
-          this.candleSeries.createPriceLine({ price: p.tp1, color: '#00e676', lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: 'TP1' });
-          this.candleSeries.createPriceLine({ price: p.tp2, color: '#00e676', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'TP2' });
+          this.priceLines.push(this.candleSeries.createPriceLine({ price: p.neckline, color: '#ffd600', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'NECKLINE' }));
+          this.priceLines.push(this.candleSeries.createPriceLine({ price: p.entry, color: '#00e5ff', lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: 'ENTRY' }));
+          this.priceLines.push(this.candleSeries.createPriceLine({ price: p.stopLoss, color: '#ff3d57', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'SL' }));
+          this.priceLines.push(this.candleSeries.createPriceLine({ price: p.tp1, color: '#00e676', lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: 'TP1' }));
+          this.priceLines.push(this.candleSeries.createPriceLine({ price: p.tp2, color: '#00e676', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'TP2' }));
         } catch(e) {}
       });
 

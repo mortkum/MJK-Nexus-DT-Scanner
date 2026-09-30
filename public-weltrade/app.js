@@ -88,11 +88,13 @@ async function doScan() {
     const data = await res.json();
     state.scanResults = data.results || [];
     const allPatterns = state.scanResults.flatMap(r => r.enrichedPatterns || []);
-    
+
     el.statCount.textContent = state.scanResults.length;
     el.statPatterns.textContent = allPatterns.length;
     el.statHigh.textContent = allPatterns.filter(p=>p.isHighProb).length;
     el.statTime.textContent = new Date().toLocaleTimeString();
+
+    if (data.dataSource) updateDataSourceBanner(data.dataSource);
 
     if (allPatterns.filter(p=>p.isHighProb).length > 0 && el.audioToggle.checked) playChime();
 
@@ -105,6 +107,45 @@ async function doScan() {
     el.scanBtn.disabled = false;
   }
 }
+
+function updateDataSourceBanner(ds) {
+  const banner = document.getElementById('dataSourceBanner');
+  if (!banner) return;
+  let pill, detail;
+  if (!ds) {
+    pill = '<span class="ds-pill ds-gray">⚪ UNKNOWN</span>';
+    detail = '';
+  } else if (ds.source === 'weltrade-mt5-live' && ds.connected) {
+    pill = '<span class="ds-pill ds-green">🟢 LIVE WELTRADE MT5</span>';
+    detail = `Connected: Login ${ds.health?.login} on ${ds.health?.server} • ${ds.health?.symbols_live || 0} symbols live`;
+  } else if (ds.source === 'weltrade-mt5-bridge') {
+    pill = '<span class="ds-pill ds-amber">🟡 BRIDGE READY • NOT CONNECTED</span>';
+    detail = `<a href="/weltrade/settings.html" style="color:#5ce4ff">Connect your Weltrade credentials →</a>`;
+  } else if (ds.source === 'simulated-fallback') {
+    pill = '<span class="ds-pill ds-red">⚠️ SIMULATED DATA</span>';
+    detail = `<a href="/weltrade/settings.html" style="color:#ffd166">Install Python bridge for live data →</a>`;
+  } else {
+    pill = '<span class="ds-pill ds-gray">⚪ UNKNOWN</span>';
+    detail = '';
+  }
+  banner.innerHTML = pill + '<span class="ds-detail">' + detail + '</span>';
+}
+
+// Poll bridge status independently so the banner updates between scans
+async function pollBridgeStatus() {
+  try {
+    const h = await fetch('/api/weltrade/bridge/health').then(r=>r.json()).catch(()=>null);
+    if (!h) return;
+    let ds;
+    if (h.connected) ds = { source: 'weltrade-mt5-live', connected: true, health: h };
+    else if (h.mt5_available) ds = { source: 'weltrade-mt5-bridge', connected: false, health: h };
+    else ds = { source: 'simulated-fallback', connected: false, health: h };
+    updateDataSourceBanner(ds);
+  } catch (_) {}
+}
+
+setInterval(pollBridgeStatus, 5000);
+pollBridgeStatus();
 
 function renderResults() {
   let list = [...state.scanResults];
@@ -191,13 +232,12 @@ async function loadCandles(symbol, tf) {
   try {
     const cacheKey = `${symbol}-${tf}-${state.broker}`;
     let data;
-    if (state.candlesCache[cacheKey]) {
-      data = state.candlesCache[cacheKey];
-    } else {
-      const res = await fetch(`/api/candles?symbol=${symbol}&timeframe=${tf}&broker=${state.broker}`);
-      data = await res.json();
-      state.candlesCache[cacheKey] = data;
-    }
+    // Always refetch (no cache) when explicitly loading for the chart.
+    // The radar scan already ran and may have stale cached data; we want
+    // fresh candles to avoid mixed-scale issues on the chart.
+    const res = await fetch(`/api/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${tf}&broker=${state.broker}`);
+    data = await res.json();
+    state.candlesCache[cacheKey] = data;
     const relevantPatterns = (data.patterns || []).length ? data.patterns : [state.selectedPattern].filter(Boolean);
     chartEngine.setData(data.candles, relevantPatterns);
   } catch(e){ console.error('candle load failed', e); }

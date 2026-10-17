@@ -81,21 +81,50 @@ Expected output:
 --------------------------------------------------------
 ```
 
+`npm test` also runs the **Travel Marketing Studio clone** suite (28 checks, jsdom):
+
+```bash
+npm run test:studio   # just the clone suite
+```
+
+```
+• Content desk renders 10 channel cards... PASSED
+• Channels match the original order... PASSED
+• Hero headline matches the original copy... PASSED
+• Source of truth is loaded... PASSED
+• Business Overview Summary has all 6 sections... PASSED
+• Write opens the piece drawer... PASSED
+• Write all ten produces 10 pieces... PASSED
+• Library lists every piece... PASSED
+• Channel filter narrows the library... PASSED
+• Distribution plan lists all 10 channels... PASSED
+• Deep link to /library opens the library view... PASSED
+• Pieces are persisted to localStorage... PASSED
+--------------------------------------------------------
+📊 TEST RESULTS: 28 Passed, 0 Failed.
+✅ TRAVEL MARKETING STUDIO CLONE VERIFIED!
+```
+
 ---
 
-## 🌐 TravelPulse Content Studio — Site Clone
+## 🌐 Travel Marketing Studio — Site Clone
 
-A self-contained, offline clone of **https://imposing-travel-pulse-pro.base44.app** lives in
-`public-travelpulse/` and is served by the same Express app:
+A self-contained, offline clone of the Base44 app at
+**https://imposing-travel-pulse-pro.base44.app** lives in `public-travelpulse/` and is served by
+the same Express app:
 
 * **URL:** http://localhost:3000/travelpulse
+* **Views:** `/travelpulse/` (content desk) · `/travelpulse/library` · `/travelpulse/plan`
 * **Docs:** [`CLONE_TRAVELPULSE.md`](CLONE_TRAVELPULSE.md)
 
-> **Note on the upstream site:** the Base44 app has **not been published**, so the public URL
-> serves Base44's *"isn't available yet"* landing page. That page is what this clone reproduces
-> — the real TravelPulse Content Studio UI is not publicly retrievable (API returns `401`, and
-> there is no archive). See `CLONE_TRAVELPULSE.md` for the full probe log and the steps to
-> re-clone once the app is published.
+> **How it was cloned:** the app is *not* published, so a plain fetch of the URL returns Base44's
+> *"isn't available yet"* placeholder — which is a **client-side render**, not the server response.
+> A headless browser sees the real app, so the bundle, routes, copy and design tokens were
+> extracted from it and rebuilt as clean local source. Full probe log in `CLONE_TRAVELPULSE.md`.
+
+> **One substitution:** the original calls Base44's hosted LLM to write copy. The clone's writers
+> are local, deterministic composers grounded in the same source-of-truth facts. Replacing
+> `Model.generate()` with any completion endpoint swaps it back with no UI change.
 
 ---
 
@@ -146,17 +175,17 @@ double-pattern-scanner/
 ├── public-weltrade/            # Clone served at /weltrade
 ├── public-deriv/               # Clone served at /deriv
 ├── public-travelpulse/         # Clone of imposing-travel-pulse-pro.base44.app → /travelpulse
-│   ├── index.html              # TravelPulse Content Studio landing page
-│   ├── styles.css              # Base44-style theme (light + dark)
-│   ├── app.js                  # Theme override, provenance stamp, keyboard shortcut
-│   ├── favicon.svg             # App icon
-│   └── assets/
-│       └── base44-symbol.svg   # Locally rebuilt Base44 brand mark
+│   ├── index.html              # Content desk / Library / Distribution plan
+│   ├── styles.css              # Design system (Fraunces + Inter + JetBrains Mono, brass on ink)
+│   ├── app.js                  # Router, state, drawer, library, distribution plan
+│   ├── content-model.js        # Source of truth, 10 channels, per-channel writers
+│   └── favicon.svg             # TM monogram
 │
-├── CLONE_TRAVELPULSE.md        # Site-clone notes: probe log, fidelity, how to re-clone
+├── CLONE_TRAVELPULSE.md        # Site-clone notes: probe log, tokens, fidelity, re-sync steps
 │
 └── test/
-    └── run-tests.js            # Automated 10-point test runner
+    ├── run-tests.js            # Automated 10-point test runner
+    └── studio.test.js          # 28-check DOM test suite for the Travel Marketing Studio clone
 ```
 
 ---

@@ -1,95 +1,561 @@
 /* ============================================================
-   TravelPulse Content Studio — local clone
+   Travel Marketing Studio — app shell
    ------------------------------------------------------------
-   Upstream:  https://imposing-travel-pulse-pro.base44.app
-   Status:    the upstream app has NOT been published. Every
-              route on that host returns Base44's "isn't
-              available yet" landing page, which is what this
-              clone reproduces.
+   Reverse-engineered from the published Base44 app
+   (appId 6ad1b02d62830e19ceea7037).
+   Routes:  /            → Content desk
+            /library     → Content library
+            /plan        → Distribution plan
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var UPSTREAM = 'https://imposing-travel-pulse-pro.base44.app';
-  var THEME_KEY = 'tp-clone-theme';
+  var Model = window.StudioModel;
+  var STORAGE_KEY = 'tms.pieces.v1';
+  var SOURCE_KEY = 'tms.source.v1';
 
-  /* ---------- Theme override (light / dark / system) ---------- */
+  /* ---------------- Base path ---------------- */
 
-  function applyTheme(theme) {
-    var root = document.documentElement;
-    if (theme === 'light' || theme === 'dark') {
-      root.setAttribute('data-theme', theme);
-    } else {
-      root.removeAttribute('data-theme');
-    }
-  }
-
-  function resolveInitialTheme() {
-    var params = new URLSearchParams(window.location.search);
-    var fromQuery = params.get('theme');
-
-    if (fromQuery === 'light' || fromQuery === 'dark' || fromQuery === 'system') {
-      try {
-        window.localStorage.setItem(THEME_KEY, fromQuery);
-      } catch (e) {
-        /* private mode — fall through to the query value only */
-      }
-      return fromQuery;
-    }
-
+  var BASE = (function () {
+    var scripts = document.getElementsByTagName('script');
+    var last = scripts[scripts.length - 1];
+    var src = last && last.src ? last.src : window.location.href;
     try {
-      var stored = window.localStorage.getItem(THEME_KEY);
-      if (stored === 'light' || stored === 'dark' || stored === 'system') {
-        return stored;
-      }
+      return new URL(src, window.location.href).pathname.replace(/\/[^/]*$/, '');
     } catch (e) {
-      /* ignore */
+      return window.location.pathname.replace(/\/[^/]*$/, '');
+    }
+  })();
+
+  /* ---------------- State ---------------- */
+
+  var state = {
+    route: 'desk',
+    filter: 'all',
+    pieces: load(STORAGE_KEY, []),
+    source: load(SOURCE_KEY, null),
+    draft: null
+  };
+
+  if (!state.source) {
+    state.source = JSON.parse(JSON.stringify(Model.SOURCE));
+  }
+
+  function load(key, fallback) {
+    try {
+      var raw = window.localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function save(key, value) {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      /* private mode — session-only */
+    }
+  }
+
+  function persistPieces() {
+    save(STORAGE_KEY, state.pieces);
+  }
+
+  function persistSource() {
+    save(SOURCE_KEY, state.source);
+  }
+
+  /* ---------------- DOM refs ---------------- */
+
+  var el = {
+    views: {
+      desk: document.getElementById('view-desk'),
+      library: document.getElementById('view-library'),
+      plan: document.getElementById('view-plan')
+    },
+    nav: document.getElementById('nav'),
+    channelGrid: document.getElementById('channelGrid'),
+    libraryList: document.getElementById('libraryList'),
+    libraryFilters: document.getElementById('libraryFilters'),
+    planList: document.getElementById('planList'),
+    navPieceCount: document.getElementById('navPieceCount'),
+    deskPieceCount: document.getElementById('deskPieceCount'),
+    sourceName: document.getElementById('sourceName'),
+    sourceBlurb: document.getElementById('sourceBlurb'),
+    sourceStatus: document.getElementById('sourceStatus'),
+    summaryContent: document.getElementById('summaryContent'),
+    drawer: document.getElementById('drawer'),
+    drawerEyebrow: document.getElementById('drawerEyebrow'),
+    drawerTitle: document.getElementById('drawerTitle'),
+    drawerBody: document.getElementById('drawerBody'),
+    drawerCopyBtn: document.getElementById('drawerCopyBtn'),
+    drawerSaveBtn: document.getElementById('drawerSaveBtn'),
+    drawerClose: document.getElementById('drawerClose'),
+    scrim: document.getElementById('scrim'),
+    toast: document.getElementById('toast'),
+    writeAllBtn: document.getElementById('writeAllBtn'),
+    myOwnPieceBtn: document.getElementById('myOwnPieceBtn'),
+    editSourceBtn: document.getElementById('editSourceBtn')
+  };
+
+  /* ---------------- Helpers ---------------- */
+
+  function h(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = text;
+    return node;
+  }
+
+  var toastTimer = null;
+  function toast(message) {
+    el.toast.textContent = message;
+    el.toast.classList.remove('is-hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      el.toast.classList.add('is-hidden');
+    }, 2400);
+  }
+
+  function piecesFor(channelId) {
+    return state.pieces.filter(function (p) {
+      return p.channel === channelId;
+    });
+  }
+
+  /* ---------------- Rendering: source of truth ---------------- */
+
+  function renderSource() {
+    el.sourceName.textContent = state.source.name;
+    el.sourceBlurb.textContent = state.source.blurb;
+    el.sourceStatus.textContent = state.source.status || 'Loaded';
+
+    el.summaryContent.textContent = '';
+    (state.source.summary || []).forEach(function (section) {
+      var wrap = h('div', 'summary__section');
+      wrap.appendChild(h('h4', null, section.heading));
+      wrap.appendChild(h('p', null, section.body));
+      el.summaryContent.appendChild(wrap);
+    });
+  }
+
+  /* ---------------- Rendering: channels ---------------- */
+
+  function renderChannels() {
+    el.channelGrid.textContent = '';
+
+    Model.CHANNELS.forEach(function (channel) {
+      var written = piecesFor(channel.id).length;
+
+      var card = h('article', 'channel');
+
+      var top = h('div', 'channel__top');
+      top.appendChild(h('span', 'channel__index', channel.index));
+      top.appendChild(h('h3', 'channel__name', channel.name));
+      card.appendChild(top);
+
+      card.appendChild(h('p', 'channel__format', channel.format));
+      card.appendChild(h('p', 'channel__desc', channel.description));
+
+      var foot = h('div', 'channel__foot');
+      var status = h(
+        'span',
+        'channel__state' + (written ? ' channel__state--done' : ''),
+        written ? written + (written === 1 ? ' piece' : ' pieces') : 'No content yet'
+      );
+      foot.appendChild(status);
+
+      var btn = h('button', 'btn btn--gold btn--sm', written ? 'Write again' : 'Write');
+      btn.type = 'button';
+      btn.setAttribute('data-channel', channel.id);
+      foot.appendChild(btn);
+
+      card.appendChild(foot);
+      el.channelGrid.appendChild(card);
+    });
+  }
+
+  /* ---------------- Rendering: library ---------------- */
+
+  function renderLibrary() {
+    el.libraryFilters.textContent = '';
+
+    var filters = [{ id: 'all', name: 'All channels' }].concat(Model.CHANNELS);
+    filters.forEach(function (f) {
+      var btn = h('button', 'filter' + (state.filter === f.id ? ' is-active' : ''), f.name);
+      btn.type = 'button';
+      btn.setAttribute('data-filter', f.id);
+      el.libraryFilters.appendChild(btn);
+    });
+
+    el.libraryList.textContent = '';
+
+    var visible = state.pieces
+      .filter(function (p) {
+        return state.filter === 'all' || p.channel === state.filter;
+      })
+      .slice()
+      .reverse();
+
+    if (!visible.length) {
+      el.libraryList.appendChild(
+        h('div', 'empty', 'No pieces yet. Head back to the content desk and write your first one.')
+      );
+      return;
     }
 
-    return 'system';
+    visible.forEach(function (piece) {
+      var card = h('article', 'piece');
+
+      var head = h('div', 'piece__head');
+      head.appendChild(h('span', 'piece__channel', piece.channelIndex + ' · ' + piece.channelName));
+      var copy = h('button', 'btn btn--ghost btn--sm', 'Copy');
+      copy.type = 'button';
+      copy.setAttribute('data-copy', piece.id);
+      head.appendChild(copy);
+      card.appendChild(head);
+
+      card.appendChild(h('h3', 'piece__title', piece.title || 'Untitled piece'));
+      card.appendChild(h('p', 'piece__excerpt', excerpt(piece.body || '')));
+
+      el.libraryList.appendChild(card);
+    });
   }
 
-  applyTheme(resolveInitialTheme());
-
-  /* ---------- Provenance stamp ---------- */
-
-  function stampProvenance() {
-    var el = document.getElementById('cloneNote');
-    if (!el) return;
-
-    var now = new Date();
-    var when = now.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
-
-    el.innerHTML =
-      'Offline clone of <a href="' + UPSTREAM + '" target="_blank" rel="noopener noreferrer">' +
-      UPSTREAM +
-      '</a> — rendered ' + when +
-      '. The upstream app has not been published, so this reproduces the landing page that URL serves.';
+  function excerpt(text) {
+    var clean = text.replace(/\s+/g, ' ').trim();
+    return clean.length > 190 ? clean.slice(0, 190) + '…' : clean;
   }
 
-  stampProvenance();
+  /* ---------------- Rendering: distribution plan ---------------- */
 
-  /* ---------- Small niceties ---------- */
+  function renderPlan() {
+    el.planList.textContent = '';
 
-  // Keep the document title in sync with the app name, even if a host
-  // rewrites or prefixes titles.
-  document.title = 'TravelPulse Content Studio';
+    Model.CHANNELS.forEach(function (channel) {
+      var written = piecesFor(channel.id).length;
+      var row = h('div', 'plan__row');
 
-  // Flag the document as hydrated so CSS can opt into post-load styling.
-  document.documentElement.setAttribute('data-clone-ready', 'true');
+      row.appendChild(h('span', 'plan__index', channel.index));
+      row.appendChild(h('span', 'plan__channel', channel.name));
+      row.appendChild(
+        h('span', 'plan__desc', channel.description + (written ? ' · piece ready to post' : ' · not written yet'))
+      );
+      row.appendChild(h('span', 'plan__cadence', channel.cadence));
 
-  // Keyboard: "/" focuses the first call-to-action, like the original.
-  document.addEventListener('keydown', function (event) {
-    if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
+      el.planList.appendChild(row);
+    });
+  }
 
-    var tag = (event.target && event.target.tagName) || '';
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  /* ---------------- Counts ---------------- */
 
-    var firstCta = document.querySelector('.b44-btn');
-    if (!firstCta) return;
+  function renderCounts() {
+    var n = state.pieces.length;
+    el.navPieceCount.textContent = String(n);
+    el.deskPieceCount.textContent = n + (n === 1 ? ' piece written' : ' pieces written');
+  }
 
-    event.preventDefault();
-    firstCta.focus();
+  /* ---------------- Drawer ---------------- */
+
+  function openDrawer(draft) {
+    state.draft = draft;
+    el.drawerEyebrow.textContent = draft.channelIndex
+      ? draft.channelIndex + ' · ' + draft.channelName
+      : 'Your own piece';
+    el.drawerTitle.textContent = draft.title || 'New piece';
+
+    el.drawerBody.textContent = '';
+
+    var titleWrap = h('div', 'drawer__field');
+    titleWrap.appendChild(h('span', 'drawer__label', 'Title / hook'));
+    if (draft.editable) {
+      var titleInput = h('textarea');
+      titleInput.rows = 2;
+      titleInput.className = 'drawer__input';
+      titleInput.value = draft.title || '';
+      titleInput.setAttribute('data-field', 'title');
+      titleWrap.appendChild(titleInput);
+    } else {
+      titleWrap.appendChild(h('p', 'drawer__text drawer__text--title', draft.title || ''));
+    }
+    el.drawerBody.appendChild(titleWrap);
+
+    var bodyWrap = h('div', 'drawer__field');
+    bodyWrap.appendChild(h('span', 'drawer__label', draft.format || 'Copy'));
+    if (draft.editable) {
+      var bodyInput = h('textarea');
+      bodyInput.rows = 14;
+      bodyInput.className = 'drawer__input';
+      bodyInput.value = draft.body || '';
+      bodyInput.setAttribute('data-field', 'body');
+      bodyWrap.appendChild(bodyInput);
+    } else {
+      bodyWrap.appendChild(h('p', 'drawer__text', draft.body || ''));
+    }
+    el.drawerBody.appendChild(bodyWrap);
+
+    if (draft.extras && draft.extras.length) {
+      var extras = h('div', 'drawer__extras');
+      draft.extras.forEach(function (extra) {
+        var row = h('div', 'drawer__extra');
+        row.appendChild(h('b', null, extra.label));
+        row.appendChild(h('span', null, extra.value));
+        extras.appendChild(row);
+      });
+      el.drawerBody.appendChild(extras);
+    }
+
+    el.drawer.classList.remove('is-hidden');
+    el.drawer.setAttribute('aria-hidden', 'false');
+    el.scrim.classList.remove('is-hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDrawer() {
+    state.draft = null;
+    el.drawer.classList.add('is-hidden');
+    el.drawer.setAttribute('aria-hidden', 'true');
+    el.scrim.classList.add('is-hidden');
+    document.body.style.overflow = '';
+  }
+
+  function currentDraftText() {
+    if (!state.draft) return '';
+    if (state.draft.editable) {
+      var titleField = el.drawerBody.querySelector('[data-field="title"]');
+      var bodyField = el.drawerBody.querySelector('[data-field="body"]');
+      state.draft.title = titleField ? titleField.value : state.draft.title;
+      state.draft.body = bodyField ? bodyField.value : state.draft.body;
+    }
+    return (state.draft.title || '') + '\n\n' + (state.draft.body || '');
+  }
+
+  /* ---------------- Actions ---------------- */
+
+  function writeChannel(channelId) {
+    var piece = Model.generate(channelId, state.source);
+    openDrawer(piece);
+  }
+
+  function writeAll() {
+    var generated = Model.generateAll(state.source);
+    var channelIds = Model.CHANNELS.map(function (c) {
+      return c.id;
+    });
+    // Refresh rather than duplicate: one current piece per channel.
+    state.pieces = state.pieces.filter(function (p) {
+      return channelIds.indexOf(p.channel) === -1;
+    });
+    state.pieces = state.pieces.concat(generated);
+    persistPieces();
+    renderAll();
+    toast('Wrote all ten pieces — they are in the Library');
+    navigate('library');
+  }
+
+  function saveDraft() {
+    if (!state.draft) return;
+    var piece = JSON.parse(JSON.stringify(state.draft));
+    piece.id = 'p' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    piece.createdAt = new Date().toISOString();
+    piece.sourceName = state.source.name;
+    state.pieces.push(piece);
+    persistPieces();
+    closeDrawer();
+    renderAll();
+    toast('Saved to Library');
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        function () { toast('Copied to clipboard'); },
+        function () { toast('Select the text and copy manually'); }
+      );
+      return;
+    }
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    try {
+      document.execCommand('copy');
+      toast('Copied to clipboard');
+    } catch (e) {
+      toast('Select the text and copy manually');
+    }
+    document.body.removeChild(area);
+  }
+
+  function editSource() {
+    openDrawer({
+      channelIndex: '',
+      channelName: 'Source of truth',
+      title: state.source.name,
+      format: 'Source of truth',
+      editable: false,
+      body:
+        state.source.blurb +
+        '\n\n' +
+        (state.source.summary || [])
+          .map(function (s) { return s.heading + '\n' + s.body; })
+          .join('\n\n'),
+      extras: []
+    });
+
+    // Swap the read-only view for an editable one.
+    var bodyWrap = el.drawerBody.querySelectorAll('.drawer__field')[1];
+    if (bodyWrap) {
+      bodyWrap.textContent = '';
+      bodyWrap.appendChild(h('span', 'drawer__label', 'Summary'));
+      var input = h('textarea');
+      input.rows = 18;
+      input.className = 'drawer__input';
+      input.value = state.source.summary
+        .map(function (s) { return s.heading + '\n' + s.body; })
+        .join('\n\n');
+      input.setAttribute('data-field', 'source');
+      bodyWrap.appendChild(input);
+    }
+    el.drawerSaveBtn.textContent = 'Save source of truth';
+    state.draft = { sourceEdit: true };
+  }
+
+  function saveSourceEdit() {
+    var field = el.drawerBody.querySelector('[data-field="source"]');
+    if (!field) return;
+
+    var sections = [];
+    String(field.value)
+      .split(/\n\s*\n/)
+      .forEach(function (block) {
+        var lines = block.split('\n');
+        if (!lines.length) return;
+        var heading = lines[0].trim();
+        var body = lines.slice(1).join('\n').trim();
+        if (heading) sections.push({ heading: heading, body: body });
+      });
+
+    state.source.summary = sections;
+    persistSource();
+    closeDrawer();
+    renderAll();
+    toast('Source of truth updated');
+  }
+
+  /* ---------------- Routing ---------------- */
+
+  function routeFromPath() {
+    var path = window.location.pathname;
+    if (path.indexOf(BASE) === 0) path = path.slice(BASE.length);
+    path = path.replace(/^\/+|\/+$/g, '');
+    if (path === 'library' || path === 'plan') return path;
+    return 'desk';
+  }
+
+  function navigate(route, push) {
+    state.route = route;
+    if (push !== false) {
+      var url = route === 'desk' ? BASE + '/' : BASE + '/' + route;
+      if (window.location.pathname !== url) window.history.pushState({ route: route }, '', url);
+    }
+
+    Object.keys(el.views).forEach(function (key) {
+      el.views[key].classList.toggle('is-hidden', key !== route);
+    });
+
+    Array.prototype.forEach.call(el.nav.querySelectorAll('.nav__link'), function (btn) {
+      btn.classList.toggle('is-active', btn.getAttribute('data-route') === route);
+    });
+
+    if (route === 'library') renderLibrary();
+    if (route === 'plan') renderPlan();
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  /* ---------------- Wiring ---------------- */
+
+  document.addEventListener('click', function (event) {
+    var target = event.target;
+
+    var navBtn = target.closest ? target.closest('[data-route]') : null;
+    if (navBtn) {
+      navigate(navBtn.getAttribute('data-route'));
+      return;
+    }
+
+    var writeBtn = target.closest ? target.closest('[data-channel]') : null;
+    if (writeBtn) {
+      writeChannel(writeBtn.getAttribute('data-channel'));
+      return;
+    }
+
+    var filterBtn = target.closest ? target.closest('[data-filter]') : null;
+    if (filterBtn) {
+      state.filter = filterBtn.getAttribute('data-filter');
+      renderLibrary();
+      return;
+    }
+
+    var copyBtn = target.closest ? target.closest('[data-copy]') : null;
+    if (copyBtn) {
+      var id = copyBtn.getAttribute('data-copy');
+      var piece = state.pieces.filter(function (p) { return p.id === id; })[0];
+      if (piece) copyText((piece.title || '') + '\n\n' + (piece.body || ''));
+      return;
+    }
   });
+
+  el.writeAllBtn.addEventListener('click', writeAll);
+  el.myOwnPieceBtn.addEventListener('click', function () {
+    openDrawer({
+      channelIndex: '',
+      channelName: 'Your own piece',
+      title: '',
+      format: 'Your own piece',
+      editable: true,
+      body: '',
+      extras: []
+    });
+    el.drawerSaveBtn.textContent = 'Save to library';
+    var bodyField = el.drawerBody.querySelector('[data-field="body"]');
+    if (bodyField) bodyField.focus();
+  });
+
+  el.editSourceBtn.addEventListener('click', editSource);
+  el.drawerClose.addEventListener('click', closeDrawer);
+  el.scrim.addEventListener('click', closeDrawer);
+  el.drawerCopyBtn.addEventListener('click', function () {
+    copyText(currentDraftText());
+  });
+  el.drawerSaveBtn.addEventListener('click', function () {
+    if (state.draft && state.draft.sourceEdit) saveSourceEdit();
+    else saveDraft();
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && !el.drawer.classList.contains('is-hidden')) closeDrawer();
+  });
+
+  window.addEventListener('popstate', function () {
+    navigate(routeFromPath(), false);
+  });
+
+  /* ---------------- Boot ---------------- */
+
+  function renderAll() {
+    renderSource();
+    renderChannels();
+    renderCounts();
+    renderLibrary();
+    renderPlan();
+  }
+
+  renderAll();
+  navigate(routeFromPath(), false);
 })();

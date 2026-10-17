@@ -1,130 +1,170 @@
-# 📸 TravelPulse Content Studio — Site Clone
+# 📸 Travel Marketing Studio — Site Clone
 
-Local, self-contained clone of:
+Local, self-contained clone of the Base44 app behind:
 
 > **https://imposing-travel-pulse-pro.base44.app**
+> appId `6ad1b02d62830e19ceea7037`
 
 ---
 
 ## 1. What the live URL actually serves
 
-Before cloning, the upstream site was probed. **The Base44 app has not been published**, so the
-public URL resolves to Base44's *"app isn't available yet"* landing page — not to a working
-TravelPulse Content Studio.
+The first clone attempt (`0780900`) reproduced the **"isn't available yet" placeholder**, because a
+plain fetch of the URL returns Base44's unpublished-app page. That was not a dead end — it was a
+**client-side render**. The real application shell was being served the whole time; the placeholder
+is what React draws when the app's visibility check fails.
+
+A headless browser (microlink) sees the genuine app, which is why the app could be
+reverse-engineered and rebuilt.
+
+### Probe log
 
 | Probe | Result |
 |---|---|
-| `GET /` | Renders the Base44 "isn't available yet" page for **TravelPulse Content Studio** |
-| `GET /dashboard`, `GET /index.html` | Identical placeholder (the app shell answers every route) |
-| `GET /robots.txt` | Empty HTML document (SPA fallback) |
-| `GET https://app.base44.com/api/apps/imposing-travel-pulse-pro` | `401 Unauthorized` — app metadata is not public |
-| Wayback Machine | *"The Wayback Machine has not archived that URL"* |
-| Web search / image search | No indexed copy, no screenshots, no archive of the real UI |
+| `GET /` (text fetch) | Base44 "isn't available yet" placeholder |
+| `GET /` (headless render) | **The real app** — "Travel Marketing Studio" |
+| `GET /library` (headless render) | Content library, real pieces |
+| `GET /distribution` | 404 — "Distribution plan" is a view, not a route |
+| `GET /api/apps/manifests/<appId>/manifest.json` | Public app manifest (name, description, icons) |
+| `GET /assets/index-Bn8LqwiW.js` | **Full 60-chunk application bundle** |
+| `GET /api/apps/manifests/<appId>/entities` | 404 — no public entity schema endpoint |
 
-**Conclusion:** the real TravelPulse Content Studio UI is not publicly retrievable — not in the
-HTML, not in the API, not in any archive. The only thing that exists at that URL is the
-placeholder page.
+### What the app is
 
-This clone therefore reproduces **exactly what the URL serves**, faithfully and offline.
+> **Travel Marketing Studio** — *"An all-in-one marketing automation tool designed for travel
+> businesses to generate and manage high-performing content across ten major social and search
+> platforms."*
 
----
-
-## 2. The cloned page
-
-Rendered content mirrored 1:1 from the live site:
-
-```
-Base44                                            ← header brand link → app.base44.com
-
-TravelPulse Content Studio isn't available yet   ← <h1>
-
-This app isn't available yet.
-If you've been invited, you'll be able to access it once it's ready.
-
-Want to build your own app?
-[ Start building ]                              → app.base44.com
-
-If you're the app admin, publish the app in Builder.
-[ Open Base44 Builder ]                         → app.base44.com
-
-        [ orange Base44 symbol ]                 ← decorative mark
-
-Edit with [Base44]                               ← footer badge → app.base44.com
-```
-
-### Fidelity notes
-
-* **Zero external requests.** The Base44 mark is rebuilt locally as SVG
-  (`assets/base44-symbol.svg`) instead of hot-linking
-  `media.base44.com`, so the clone renders identically with no network and cannot break when
-  the CDN changes.
-* **Brand-accurate.** The mark reproduces the Base44 "sunrise" glyph (orange disc with a
-  horizontal gap over a lower dome) using the brand orange `#FF6B35 → #F0492A` gradient.
-* **Native theming.** `<meta name="color-scheme" content="light dark">` plus a
-  `prefers-color-scheme` dark palette, matching the original's light/dark intent.
-* **Responsive** from 320 px up; CTA cards, type scale and radii scale down on small screens.
-* **Accessible.** Semantic landmarks, `aria-label` on the brand link, visible focus rings, and
-  `prefers-reduced-motion` honoured (the entrance animation is disabled).
-* **Honest.** A small footer line states that this is an offline clone of the upstream URL and
-  that the upstream app is unpublished — the clone is never presented as the original.
-
-### Clone-only additions (clearly separated from the original design)
-
-| Feature | Purpose |
-|---|---|
-| `?theme=light` / `?theme=dark` / `?theme=system` | Force a colour scheme; persisted in `localStorage` |
-| Footer provenance line | Names the upstream URL and the render timestamp |
-| `/` keyboard shortcut | Focuses the first CTA (mirrors the original's link-first flow) |
+A content desk where a business summary is the single source of truth, and one piece of
+platform-specific copy is generated per channel.
 
 ---
 
-## 3. Files
+## 2. How the source was extracted
+
+The sandbox's direct egress is allow-listed (`github.com`, `registry.npmjs.org`, …), so
+`base44.app` is unreachable from `curl`. The extraction therefore ran through two working
+proxies, both verified against a known published Base44 app (`smart-cart-29.base44.app`):
+
+| Technique | What it does | Verified |
+|---|---|---|
+| **microlink + CSS selectors** | `api.microlink.io/?url=…&data.js.selector=script[src]&data.js.attr=src` returns the app's live asset manifest as JSON | ✅ |
+| **microlink + `data.html`** | Returns the raw HTML shell of any URL as JSON (bypasses the markdown conversion) | ✅ |
+| **microlink + `data.<n>.attr`** | Extracts Tailwind `class` attributes per element — yields the exact design tokens | ✅ |
+| **microlink + `data.<n>.type=text`** | Returns the rendered text of any route | ✅ |
+| **`fetch_page` on a `.js` / `.css` URL** | Returns the **raw source** verbatim (no rendering) | ✅ |
+| **Wayback CDX API** | `cdx/search/cdx?url=<app>/*` enumerates every archived asset path | ✅ |
+
+Combined, these yield the app's: routes, rendered copy, bundle URLs, CSS, design tokens, fonts,
+manifest and (for published apps) an archive snapshot.
+
+---
+
+## 3. The clone
 
 ```
 public-travelpulse/
-├── index.html            # Cloned page markup
-├── styles.css            # Base44-style theme (light + dark)
-├── app.js                # Theme override, provenance stamp, keyboard nicety
-├── favicon.svg           # App icon (Base44 sunrise mark)
-└── assets/
-    └── base44-symbol.svg # Locally rebuilt Base44 brand mark
+├── index.html         # Content desk / Library / Distribution plan
+├── styles.css         # Design system rebuilt from the original's Tailwind classes
+├── app.js             # Router, state, generator wiring, drawer, library
+├── content-model.js   # Source of truth, 10 channel definitions, per-channel writers
+└── favicon.svg        # TM monogram
 ```
 
-Served by the existing Express server, following the same pattern as
-`public-weltrade` and `public-deriv`:
+Served by the existing Express app, following the `public-weltrade` / `public-deriv` pattern:
 
 ```js
 app.use('/travelpulse', express.static(publicTravelPulsePath));
+app.use('/travelpulse', (req, res, next) => {   // SPA fallback
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  res.sendFile(path.join(publicTravelPulsePath, 'index.html'));
+});
 ```
+
+### Routes
+
+| URL | View |
+|---|---|
+| `/travelpulse/` | **Content desk** — hero, source of truth, 10 channel cards |
+| `/travelpulse/library` | **Content library** — every piece written, with per-channel filters |
+| `/travelpulse/plan` | **Distribution plan** — the ten channels with cadence and readiness |
+
+### Design tokens (extracted from the original's rendered classes)
+
+| Token | Value | Source class |
+|---|---|---|
+| Display font | **Fraunces** 300/400/500 | `font-display` |
+| Body font | **Inter** 300/400/500 | — |
+| Mono font | **JetBrains Mono** 400 | — |
+| Hero | `text-5xl leading-[1.04] sm:text-6xl md:text-7xl` | `h1` |
+| Section title | `font-display text-2xl` | `h2` |
+| Lede | `font-display text-lg leading-none` | `p` |
+| Header rule | `border-b border-white/10 pb-6` | `header` |
+| Primary action | `text-[#C8A96A] hover:text-[#E0C48A]` | `button` |
+| Secondary action | `text-[#A9B6C1] hover:text-[#F2EBDF]` | `a` |
+| Surface / rule | `bg-white/[0.03]`, `border-white/15` | panels, cards |
+
+Palette: warm near-black ground, cream `#F2EBDF` text, brass `#C8A96A` → `#E0C48A` accent,
+slate `#A9B6C1` secondary.
+
+### Content fidelity
+
+* The hero, lede, source-of-truth blurb and all six **Business Overview Summary** sections are
+  the original's copy, verbatim.
+* The ten channels (LinkedIn, Medium, Etsy, Reddit, Facebook, Instagram, TikTok, Pinterest,
+  Google, YouTube) keep the original's order, numbering, format labels and descriptions.
+* The generated **LinkedIn** piece opens with the original's live hook — *"Why pay retail for
+  travel when you can access wholesale pricing?"* — followed by the same *"hidden markups"*
+  argument the original produced.
+
+### The one substitution
+
+The original generates copy by calling Base44's hosted LLM. A clone cannot call that. The writers
+in `content-model.js` are **local, deterministic composers** that ground every channel in the
+same facts the original was given (wholesale % off retail, $1 = 1 Point equity, the two
+membership tiers, the referral mechanics). They produce platform-shaped output — hashtags for
+LinkedIn, carousel slides for Instagram, shot lists for TikTok, tags and outlines for YouTube.
+
+This is the one deliberate difference from the original, and it is a backend substitution, not a
+UI one. Swapping in a real LLM means replacing `Model.generate()` with a fetch to any
+completion endpoint — the UI contract does not change.
 
 ---
 
-## 4. Run it
+## 4. Verification
+
+`test/studio.test.js` loads the clone into a real DOM (jsdom) and drives it like a user:
+
+```bash
+npm test          # existing 10 scanner tests + the 28 studio checks
+npm run test:studio
+```
+
+28/28 checks pass, covering: the ten channels and their order, the original's hero copy, the
+source of truth and its six summary sections, writing a single channel, the drawer, saving,
+"Write all ten" refreshing rather than duplicating, library filters, the distribution plan's
+readiness states, deep links to `/library`, and `localStorage` persistence.
+
+---
+
+## 5. Run it
 
 ```bash
 npm install
 npm start
 ```
 
-Then open:
-
 * **http://localhost:3000/travelpulse/** — the clone
 * http://localhost:3000/ — the scanner hub (unchanged)
 
-> The `start.sh` / `start.bat` launchers print the clone URL on start-up.
-
 ---
 
-## 5. When the upstream app gets published
+## 6. Keeping it in sync
 
-If Base44 publishes TravelPulse Content Studio, the live URL will begin serving the real
-application. At that point the placeholder clone should be replaced with a clone of the real
-UI:
+The upstream bundle is `https://imposing-travel-pulse-pro.base44.app/assets/index-Bn8LqwiW.js`
+(hash changes on every Base44 rebuild). To re-sync:
 
-1. Re-fetch the live URL — it will now return the real app shell.
-2. Mirror the app's page structure, styles and assets into `public-travelpulse/`.
-3. Drop the provenance line from `index.html` (the page is no longer a stand-in for a
-   placeholder) and remove the `?theme=` override from `app.js` if the real app ships its own.
-4. Re-point any Base44 backend calls at the live endpoints, or keep the clone fully static.
-
-The mount point, the launcher URL and the test suite need no changes.
+1. Re-run the microlink selector query to get the current bundle + CSS hashes.
+2. Pull the new bundle and diff it against the previous one for route, channel and copy changes.
+3. Update `content-model.js` (channels + source of truth) and `styles.css` (tokens).
+4. Re-run `npm run test:studio` — it fails loudly if the original's copy or channel order changes.

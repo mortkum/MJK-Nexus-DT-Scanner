@@ -165,6 +165,11 @@ app.use(express.json());
 app.use('/weltrade', express.static(publicWeltradePath));
 app.use('/deriv', express.static(publicDerivPath));
 app.use('/travelpulse', express.static(publicTravelPulsePath));
+// SPA fallback so the studio's own routes (/travelpulse/library, /travelpulse/plan) resolve
+app.use('/travelpulse', (req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  res.sendFile(path.join(publicTravelPulsePath, 'index.html'));
+});
 app.use(express.static(publicMainPath));
 
 // In-memory caches

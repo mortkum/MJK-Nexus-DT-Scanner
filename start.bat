@@ -14,6 +14,7 @@ echo 🚀 Starting on http://localhost:3000
 echo Main Hub: http://localhost:3000
 echo Weltrade: http://localhost:3000/?broker=weltrade
 echo Deriv: http://localhost:3000/?broker=deriv
+echo TravelPulse clone: http://localhost:3000/travelpulse
 start http://localhost:3000
 node server.js
 pause

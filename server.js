@@ -120,6 +120,7 @@ async function mapConcurrent(items, limit, fn) {
 const publicMainPath = path.join(__dirname, 'public');
 const publicWeltradePath = fs.existsSync(path.join(__dirname, 'public-weltrade')) ? path.join(__dirname, 'public-weltrade') : publicMainPath;
 const publicDerivPath = fs.existsSync(path.join(__dirname, 'public-deriv')) ? path.join(__dirname, 'public-deriv') : publicMainPath;
+const publicTravelPulsePath = fs.existsSync(path.join(__dirname, 'public-travelpulse')) ? path.join(__dirname, 'public-travelpulse') : publicMainPath;
 
 // Helper to scan a symbol with any candle fetcher
 async function scanGenericSymbol(symObj, candleFetcher) {
@@ -163,6 +164,7 @@ app.use(express.json());
 // Mount dedicated paths
 app.use('/weltrade', express.static(publicWeltradePath));
 app.use('/deriv', express.static(publicDerivPath));
+app.use('/travelpulse', express.static(publicTravelPulsePath));
 app.use(express.static(publicMainPath));
 
 // In-memory caches
@@ -323,5 +325,6 @@ derivApp.listen(PORT_DERIV, '0.0.0.0', () => {
   console.log(`  • Deriv on Hub:             http://localhost:${PORT_MAIN}/?broker=deriv`);
   console.log(`  • Standalone Weltrade Port: http://127.0.0.1:${PORT_WELTRADE}`);
   console.log(`  • Standalone Deriv Port:    http://127.0.0.1:${PORT_DERIV}`);
+  console.log(`  • TravelPulse clone:        http://localhost:${PORT_MAIN}/travelpulse`);
   console.log(`========================================================\n`);
 });

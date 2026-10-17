@@ -83,6 +83,22 @@ Expected output:
 
 ---
 
+## 🌐 TravelPulse Content Studio — Site Clone
+
+A self-contained, offline clone of **https://imposing-travel-pulse-pro.base44.app** lives in
+`public-travelpulse/` and is served by the same Express app:
+
+* **URL:** http://localhost:3000/travelpulse
+* **Docs:** [`CLONE_TRAVELPULSE.md`](CLONE_TRAVELPULSE.md)
+
+> **Note on the upstream site:** the Base44 app has **not been published**, so the public URL
+> serves Base44's *"isn't available yet"* landing page. That page is what this clone reproduces
+> — the real TravelPulse Content Studio UI is not publicly retrievable (API returns `401`, and
+> there is no archive). See `CLONE_TRAVELPULSE.md` for the full probe log and the steps to
+> re-clone once the app is published.
+
+---
+
 ## 🛠️ Port Customization & Troubleshooting
 
 ### 1. "Port 3000 is already in use"
@@ -126,6 +142,18 @@ double-pattern-scanner/
 │   ├── styles.css              # Financial UI styling & responsive layout
 │   ├── chart-engine.js         # Interactive Canvas candlestick chart & pattern drawer
 │   └── app.js                  # Frontend state controller, Web Audio alerts & calculators
+│
+├── public-weltrade/            # Clone served at /weltrade
+├── public-deriv/               # Clone served at /deriv
+├── public-travelpulse/         # Clone of imposing-travel-pulse-pro.base44.app → /travelpulse
+│   ├── index.html              # TravelPulse Content Studio landing page
+│   ├── styles.css              # Base44-style theme (light + dark)
+│   ├── app.js                  # Theme override, provenance stamp, keyboard shortcut
+│   ├── favicon.svg             # App icon
+│   └── assets/
+│       └── base44-symbol.svg   # Locally rebuilt Base44 brand mark
+│
+├── CLONE_TRAVELPULSE.md        # Site-clone notes: probe log, fidelity, how to re-clone
 │
 └── test/
     └── run-tests.js            # Automated 10-point test runner

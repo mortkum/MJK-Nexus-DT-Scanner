@@ -142,15 +142,35 @@ completion endpoint — the UI contract does not change.
 `test/studio.test.js` loads the clone into a real DOM (jsdom) and drives it like a user:
 
 ```bash
-npm test          # existing 10 scanner tests + the 37 studio checks
+npm test          # existing 10 scanner tests + the 59 studio checks
 npm run test:studio
 ```
 
-37/37 checks pass, covering: the ten channels and their order, the original's hero copy, the
+59/59 checks pass, covering: the ten channels and their order, the original's hero copy, the
 source of truth and its six summary sections **matched against the verbatim original text**, the
 summary disclosure's "Read full summary" ⇄ "Collapse" toggle, writing a single channel, the
 drawer, saving, "Write all ten" refreshing rather than duplicating, library filters, the
-distribution plan's readiness states, deep links to `/library`, and `localStorage` persistence.
+distribution plan's readiness states, deep links to `/library`, `localStorage` persistence, the
+second BluePrint profile, and markdown rendering.
+
+### A second source of truth: BluePrint
+
+The studio is profile-driven. The header carries a **Travel Club / BluePrint** switch, and each
+profile keeps its own source of truth, its own hero and its own library in `localStorage`
+(`tms.pieces.v1.<profile>`), so two businesses never mix.
+
+* **Travel Club** is the app's own loaded state — the text verified byte-for-byte against the
+  original.
+* **BluePrint** is a technology-leverage business for tech professionals.
+
+The BluePrint LinkedIn piece is **the client's own published post, stored verbatim** and asserted
+against the original string in the test suite. It is not generated — `Model.generate()` returns
+the canonical text for that channel and tags it *"Original output, preserved verbatim"*. It is
+the ground truth the writer's voice is calibrated to.
+
+The original returns **markdown** (`*italic*`, `**bold**`, `### headings`, numbered lists), so the
+drawer renders it as real prose — `<em>`, `<strong>`, `<h3>`/`<h4>`, `<ol>` — instead of showing
+asterisks.
 
 ---
 

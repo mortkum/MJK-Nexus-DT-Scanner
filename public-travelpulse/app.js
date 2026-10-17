@@ -12,8 +12,9 @@
   'use strict';
 
   var Model = window.StudioModel;
-  var STORAGE_KEY = 'tms.pieces.v1';
-  var SOURCE_KEY = 'tms.source.v1';
+  var PIECES_KEY = 'tms.pieces.v1.';
+  var SOURCE_KEY = 'tms.source.v1.';
+  var PROFILE_KEY = 'tms.profile.v1';
 
   /* ---------------- Base path ---------------- */
 
@@ -33,13 +34,20 @@
   var state = {
     route: 'desk',
     filter: 'all',
-    pieces: load(STORAGE_KEY, []),
-    source: load(SOURCE_KEY, null),
+    profileId: readProfile(),
+    source: null,
+    pieces: [],
     draft: null
   };
 
-  if (!state.source) {
-    state.source = JSON.parse(JSON.stringify(Model.SOURCE));
+  function readProfile() {
+    var id = null;
+    try {
+      id = window.localStorage.getItem(PROFILE_KEY);
+    } catch (e) {
+      /* ignore */
+    }
+    return id && Model.PROFILES[id] ? id : Model.DEFAULT_PROFILE;
   }
 
   function load(key, fallback) {
@@ -59,12 +67,27 @@
     }
   }
 
+  function profile() {
+    return Model.getProfile(state.profileId);
+  }
+
+  function source() {
+    var p = profile();
+    var stored = load(SOURCE_KEY + p.id, null);
+    if (stored) return stored;
+    return JSON.parse(JSON.stringify(p.source));
+  }
+
+  function loadPieces() {
+    return load(PIECES_KEY + state.profileId, []);
+  }
+
   function persistPieces() {
-    save(STORAGE_KEY, state.pieces);
+    save(PIECES_KEY + state.profileId, state.pieces);
   }
 
   function persistSource() {
-    save(SOURCE_KEY, state.source);
+    save(SOURCE_KEY + state.profileId, state.source);
   }
 
   /* ---------------- DOM refs ---------------- */
@@ -76,12 +99,15 @@
       plan: document.getElementById('view-plan')
     },
     nav: document.getElementById('nav'),
+    profileSwitch: document.getElementById('profileSwitch'),
     channelGrid: document.getElementById('channelGrid'),
     libraryList: document.getElementById('libraryList'),
     libraryFilters: document.getElementById('libraryFilters'),
     planList: document.getElementById('planList'),
     navPieceCount: document.getElementById('navPieceCount'),
     deskPieceCount: document.getElementById('deskPieceCount'),
+    heroTitle: document.getElementById('heroTitle'),
+    heroLede: document.getElementById('heroLede'),
     sourceName: document.getElementById('sourceName'),
     sourceBlurb: document.getElementById('sourceBlurb'),
     sourceStatus: document.getElementById('sourceStatus'),
@@ -127,7 +153,128 @@
     });
   }
 
+  /* ---------------- Markdown (bold, italic, lists) ---------------- */
+
+  function inlineNodes(text) {
+    var frag = document.createDocumentFragment();
+    var re = /\*\*([^*]+)\*\*|\*([^*\n]+)\*|_([^_\n]+)_/g;
+    var last = 0;
+    var m;
+
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) {
+        frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+      }
+      if (m[1] !== undefined) {
+        var strong = document.createElement('strong');
+        strong.textContent = m[1];
+        frag.appendChild(strong);
+      } else {
+        var em = document.createElement('em');
+        em.textContent = m[2] !== undefined ? m[2] : m[3];
+        frag.appendChild(em);
+      }
+      last = re.lastIndex;
+    }
+
+    if (last < text.length) {
+      frag.appendChild(document.createTextNode(text.slice(last)));
+    }
+    return frag;
+  }
+
+  function renderMarkdown(container, text) {
+    container.textContent = '';
+
+    String(text || '')
+      .split(/\n\s*\n/)
+      .forEach(function (block) {
+        var lines = block.split('\n').filter(function (l) {
+          return l.trim().length;
+        });
+        if (!lines.length) return;
+
+        if (lines.length === 1) {
+          var heading = lines[0].match(/^(#{2,4})\s+(.*)$/);
+          if (heading) {
+            var level = Math.min(6, heading[1].length + 1);
+            var node = document.createElement('h' + level);
+            node.className = 'drawer__prose-heading';
+            node.appendChild(inlineNodes(heading[2]));
+            container.appendChild(node);
+            return;
+          }
+        }
+
+        var isOrdered = lines.every(function (l) {
+          return /^\d+\.\s+/.test(l);
+        });
+        var isBullet = lines.every(function (l) {
+          return /^[•\-]\s+/.test(l);
+        });
+
+        if (isOrdered || isBullet) {
+          var list = document.createElement(isOrdered ? 'ol' : 'ul');
+          lines.forEach(function (line) {
+            var li = document.createElement('li');
+            li.appendChild(inlineNodes(line.replace(/^(\d+\.|•|-)\s+/, '')));
+            list.appendChild(li);
+          });
+          container.appendChild(list);
+          return;
+        }
+
+        var p = document.createElement('p');
+        lines.forEach(function (line, i) {
+          if (i) p.appendChild(document.createElement('br'));
+          p.appendChild(inlineNodes(line));
+        });
+        container.appendChild(p);
+      });
+  }
+
+  function stripMarkdown(text) {
+    return String(text || '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*\n]+)\*/g, '$1')
+      .replace(/_([^_\n]+)_/g, '$1')
+      .replace(/^\s*(?:\d+\.|•|-)\s+/gm, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /* ---------------- Rendering: profile switcher ---------------- */
+
+  function renderProfiles() {
+    el.profileSwitch.textContent = '';
+
+    Object.keys(Model.PROFILES).forEach(function (id) {
+      var p = Model.PROFILES[id];
+      var btn = h('button', 'profile-pill' + (id === state.profileId ? ' is-active' : ''), p.label);
+      btn.type = 'button';
+      btn.setAttribute('data-profile', id);
+      btn.setAttribute('aria-pressed', id === state.profileId ? 'true' : 'false');
+      el.profileSwitch.appendChild(btn);
+    });
+  }
+
   /* ---------------- Rendering: source of truth ---------------- */
+
+  function renderHero() {
+    var hero = profile().hero;
+    if (!hero) return;
+
+    el.heroTitle.textContent = '';
+    hero.lines.forEach(function (line, i) {
+      if (i) {
+        el.heroTitle.appendChild(document.createElement('br'));
+        el.heroTitle.appendChild(document.createTextNode(' '));
+      }
+      el.heroTitle.appendChild(document.createTextNode(line));
+    });
+
+    el.heroLede.textContent = hero.lede;
+  }
 
   function renderSource() {
     el.sourceName.textContent = state.source.name;
@@ -227,7 +374,7 @@
   }
 
   function excerpt(text) {
-    var clean = text.replace(/\s+/g, ' ').trim();
+    var clean = stripMarkdown(text);
     return clean.length > 190 ? clean.slice(0, 190) + '…' : clean;
   }
 
@@ -267,6 +414,7 @@
       ? draft.channelIndex + ' · ' + draft.channelName
       : 'Your own piece';
     el.drawerTitle.textContent = draft.title || 'New piece';
+    el.drawerSaveBtn.textContent = draft.sourceEdit ? 'Save source of truth' : 'Save to library';
 
     el.drawerBody.textContent = '';
 
@@ -294,7 +442,9 @@
       bodyInput.setAttribute('data-field', 'body');
       bodyWrap.appendChild(bodyInput);
     } else {
-      bodyWrap.appendChild(h('p', 'drawer__text', draft.body || ''));
+      var prose = h('div', 'drawer__text drawer__prose');
+      renderMarkdown(prose, draft.body || '');
+      bodyWrap.appendChild(prose);
     }
     el.drawerBody.appendChild(bodyWrap);
 
@@ -337,12 +487,11 @@
   /* ---------------- Actions ---------------- */
 
   function writeChannel(channelId) {
-    var piece = Model.generate(channelId, state.source);
-    openDrawer(piece);
+    openDrawer(Model.generate(channelId, profile()));
   }
 
   function writeAll() {
-    var generated = Model.generateAll(state.source);
+    var generated = Model.generateAll(profile());
     var channelIds = Model.CHANNELS.map(function (c) {
       return c.id;
     });
@@ -363,6 +512,7 @@
     piece.id = 'p' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
     piece.createdAt = new Date().toISOString();
     piece.sourceName = state.source.name;
+    piece.profile = state.profileId;
     state.pieces.push(piece);
     persistPieces();
     closeDrawer();
@@ -410,7 +560,7 @@
       extras: []
     });
 
-    // Swap the read-only view for an editable one.
+    // Swap the read-only body for an editable one.
     var bodyWrap = el.drawerBody.querySelectorAll('.drawer__field')[1];
     if (bodyWrap) {
       bodyWrap.textContent = '';
@@ -450,6 +600,28 @@
     toast('Source of truth updated');
   }
 
+  /* ---------------- Profile switching ---------------- */
+
+  function switchProfile(id) {
+    if (!Model.PROFILES[id] || id === state.profileId) return;
+
+    persistPieces(); // save the outgoing profile's pieces
+
+    state.profileId = id;
+    state.source = source();
+    state.pieces = loadPieces();
+    state.filter = 'all';
+
+    try {
+      window.localStorage.setItem(PROFILE_KEY, id);
+    } catch (e) {
+      /* ignore */
+    }
+
+    renderAll();
+    toast('Source of truth: ' + Model.PROFILES[id].source.name);
+  }
+
   /* ---------------- Routing ---------------- */
 
   function routeFromPath() {
@@ -484,27 +656,34 @@
 
   document.addEventListener('click', function (event) {
     var target = event.target;
+    if (!target || !target.closest) return;
 
-    var navBtn = target.closest ? target.closest('[data-route]') : null;
+    var navBtn = target.closest('[data-route]');
     if (navBtn) {
       navigate(navBtn.getAttribute('data-route'));
       return;
     }
 
-    var writeBtn = target.closest ? target.closest('[data-channel]') : null;
+    var profileBtn = target.closest('[data-profile]');
+    if (profileBtn) {
+      switchProfile(profileBtn.getAttribute('data-profile'));
+      return;
+    }
+
+    var writeBtn = target.closest('[data-channel]');
     if (writeBtn) {
       writeChannel(writeBtn.getAttribute('data-channel'));
       return;
     }
 
-    var filterBtn = target.closest ? target.closest('[data-filter]') : null;
+    var filterBtn = target.closest('[data-filter]');
     if (filterBtn) {
       state.filter = filterBtn.getAttribute('data-filter');
       renderLibrary();
       return;
     }
 
-    var copyBtn = target.closest ? target.closest('[data-copy]') : null;
+    var copyBtn = target.closest('[data-copy]');
     if (copyBtn) {
       var id = copyBtn.getAttribute('data-copy');
       var piece = state.pieces.filter(function (p) { return p.id === id; })[0];
@@ -514,6 +693,30 @@
   });
 
   el.writeAllBtn.addEventListener('click', writeAll);
+  el.myOwnPieceBtn.addEventListener('click', function () {
+    openDrawer({
+      channelIndex: '',
+      channelName: 'Your own piece',
+      title: '',
+      format: 'Your own piece',
+      editable: true,
+      body: '',
+      extras: []
+    });
+    var bodyField = el.drawerBody.querySelector('[data-field="body"]');
+    if (bodyField) bodyField.focus();
+  });
+
+  el.editSourceBtn.addEventListener('click', editSource);
+  el.drawerClose.addEventListener('click', closeDrawer);
+  el.scrim.addEventListener('click', closeDrawer);
+  el.drawerCopyBtn.addEventListener('click', function () {
+    copyText(currentDraftText());
+  });
+  el.drawerSaveBtn.addEventListener('click', function () {
+    if (state.draft && state.draft.sourceEdit) saveSourceEdit();
+    else saveDraft();
+  });
 
   /* ---------- Source-of-truth disclosure ----------
      The original shows a "Business Overview Summary" heading, the body, and a
@@ -530,32 +733,6 @@
     setSummaryOpen(el.summaryContent.classList.contains('is-hidden'));
   });
 
-  el.myOwnPieceBtn.addEventListener('click', function () {
-    openDrawer({
-      channelIndex: '',
-      channelName: 'Your own piece',
-      title: '',
-      format: 'Your own piece',
-      editable: true,
-      body: '',
-      extras: []
-    });
-    el.drawerSaveBtn.textContent = 'Save to library';
-    var bodyField = el.drawerBody.querySelector('[data-field="body"]');
-    if (bodyField) bodyField.focus();
-  });
-
-  el.editSourceBtn.addEventListener('click', editSource);
-  el.drawerClose.addEventListener('click', closeDrawer);
-  el.scrim.addEventListener('click', closeDrawer);
-  el.drawerCopyBtn.addEventListener('click', function () {
-    copyText(currentDraftText());
-  });
-  el.drawerSaveBtn.addEventListener('click', function () {
-    if (state.draft && state.draft.sourceEdit) saveSourceEdit();
-    else saveDraft();
-  });
-
   document.addEventListener('keydown', function (event) {
     if (event.key === 'Escape' && !el.drawer.classList.contains('is-hidden')) closeDrawer();
   });
@@ -567,6 +744,8 @@
   /* ---------------- Boot ---------------- */
 
   function renderAll() {
+    renderProfiles();
+    renderHero();
     renderSource();
     renderChannels();
     renderCounts();
@@ -574,6 +753,8 @@
     renderPlan();
   }
 
+  state.source = source();
+  state.pieces = loadPieces();
   renderAll();
   navigate(routeFromPath(), false);
 })();

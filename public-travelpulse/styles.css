@@ -162,6 +162,45 @@ body {
   flex-wrap: wrap;
 }
 
+/* ---------------- Profile switcher ----------------
+   A clone addition: the original app holds one business per
+   deployment, so the clone lets you switch the source of truth
+   the engine writes from. */
+
+.profiles {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.profile-pill {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--slate);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  height: 26px;
+  padding: 0 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.profile-pill:hover {
+  color: var(--cream);
+}
+
+.profile-pill.is-active {
+  color: var(--brass-hi);
+  background: rgba(200, 169, 106, 0.13);
+}
+
 .nav__link {
   appearance: none;
   border: 0;
@@ -800,6 +839,69 @@ body {
   font-size: 17px;
   line-height: 1.35;
   color: var(--cream);
+}
+
+/* Rendered markdown: the original returns bold/italic/lists, so the
+   drawer renders them instead of showing asterisks. */
+
+.drawer__prose {
+  white-space: normal;
+}
+
+.drawer__prose p {
+  margin: 0 0 14px;
+}
+
+.drawer__prose p:last-child {
+  margin-bottom: 0;
+}
+
+.drawer__prose-heading {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--cream);
+  letter-spacing: -0.01em;
+  margin: 22px 0 10px;
+}
+
+.drawer__prose-heading:first-child {
+  margin-top: 0;
+}
+
+.drawer__prose strong {
+  color: var(--cream);
+  font-weight: 600;
+}
+
+.drawer__prose,
+.drawer__prose p,
+.drawer__prose li {
+  font-family: var(--font-body), 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji',
+    'EmojiOne Color', sans-serif;
+}
+
+.drawer__prose em {
+  font-style: italic;
+  color: #e5dfd3;
+}
+
+.drawer__prose ol,
+.drawer__prose ul {
+  margin: 0 0 14px;
+  padding-left: 22px;
+  display: grid;
+  gap: 6px;
+}
+
+.drawer__prose li {
+  padding-left: 2px;
+}
+
+.drawer__prose li::marker {
+  color: var(--brass);
+  font-family: var(--font-mono);
+  font-size: 12px;
 }
 
 .drawer__input {

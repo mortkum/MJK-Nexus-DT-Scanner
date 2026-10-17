@@ -218,10 +218,138 @@ check('Unknown routes fall back to the content desk',
 
 /* ---------- 6. Persistence ---------- */
 
-const stored = JSON.parse(win.localStorage.getItem('tms.pieces.v1') || '[]');
+/* Pieces are stored per profile, so more than one business can keep its
+   own library in the same browser. */
+const stored = JSON.parse(win.localStorage.getItem('tms.pieces.v1.travel') || '[]');
 check('Pieces are persisted to localStorage', stored.length === 10, `got ${stored.length}`);
 check('Stored pieces keep their channel, title and body',
   stored.every((p) => p.channel && p.title && p.body));
+check('Pieces are namespaced per profile', stored.every((p) => p.profile === 'travel'));
+
+/* ---------- 7. The BluePrint profile ---------- */
+
+/* The original's own LinkedIn output — the ground truth for the writer. */
+const BLUEPRINT_HOOK =
+  'Most tech professionals spend their entire careers optimizing systems for organizations... ' +
+  'but rarely build a system for their own time freedom.';
+
+const BLUEPRINT_LINES = [
+  '*A few years into my career as a Technology Specialist, I realized a fundamental truth about linear work:*',
+  '**Trading hours for dollars has a hard physical ceiling.**',
+  '*No matter how skilled you are, there are only 160 working hours in a month. When you stop working, the revenue stops immediately.*',
+  '*That’s why I started researching digital leverage—systems that build* **compounding, recurring value** *alongside a traditional career.*',
+  '*Instead of relying on a single paycheck, modern professionals are beginning to leverage 4 key digital vehicles:*',
+  '1. *Digital products & knowledge assets*\n2. *Automated e-commerce funnels*\n3. *Real estate equity*\n4. *Scalable digital memberships & wholesale networks*',
+  "*Building recurring income isn't about quitting your day job tomorrow—it's about creating financial options and time equity.*",
+  '*💬* **I put together a simple 1-page comparison breakdown contrasting Linear Salaries against Modern Residual Vehicles.**',
+  "*If you’d like a copy, check out the link in my* **Featured Section** *on my profile, or send me a DM with the word* **\"BLUEPRINT\"** *and I’ll send it right over!*"
+];
+
+const model = win.StudioModel;
+const blueprint = model.PROFILES.blueprint;
+
+check('A BluePrint profile ships alongside the travel profile',
+  model.PROFILES.travel && blueprint && blueprint.label === 'BluePrint');
+
+check('BluePrint source of truth names the business',
+  blueprint.source.name === 'BluePrint — Digital Leverage for Tech Professionals' &&
+  blueprint.source.summary.length === 6);
+
+const blueprintLinkedIn = model.generate('linkedin', blueprint);
+check('BluePrint LinkedIn hook is the original post verbatim',
+  blueprintLinkedIn.title === BLUEPRINT_HOOK);
+check('BluePrint LinkedIn body is the original post verbatim',
+  blueprintLinkedIn.body === BLUEPRINT_LINES.join('\n\n'));
+
+check('All four digital vehicles survive into the copy',
+  ['Digital products & knowledge assets', 'Automated e-commerce funnels',
+   'Real estate equity', 'Scalable digital memberships & wholesale networks']
+    .every((v) => blueprintLinkedIn.body.includes(v)));
+
+check('The BLUEPRINT lead-magnet keyword is preserved',
+  blueprintLinkedIn.body.includes('**"BLUEPRINT"**'));
+
+const blueprintAll = model.generateAll(blueprint);
+check('BluePrint writes all ten channels',
+  blueprintAll.length === 10 && blueprintAll.every((p) => p.title && p.body));
+check('BluePrint pieces are tagged with their profile',
+  blueprintAll.every((p) => p.profile === 'blueprint'));
+check('Every BluePrint piece has a non-empty title',
+  blueprintAll.every((p) => typeof p.title === 'string' && p.title.trim().length > 3),
+  blueprintAll.map((p) => p.channel + ':' + p.title).join(' | '));
+
+/* ---------- 8. Markdown rendering ---------- */
+
+/* The original returns markdown; the drawer must render it, not print
+   asterisks. Drive the real UI to prove it. */
+
+const blueBtn = doc.querySelector('[data-profile="blueprint"]');
+check('The header offers a profile switcher', !!blueBtn);
+blueBtn.click();
+
+check('BluePrint swaps the hero without touching the travel copy',
+  doc.querySelector('.hero__title').textContent.replace(/\s+/g, ' ').trim() ===
+  'Ten channels. One blueprint.');
+
+check('Switching profile swaps the source of truth',
+  doc.getElementById('sourceName').textContent ===
+  'BluePrint — Digital Leverage for Tech Professionals');
+
+const linkedInBtn = doc.querySelector('[data-channel="linkedin"]');
+linkedInBtn.click();
+
+const prose = doc.querySelector('.drawer__prose');
+check('Drawer renders the BluePrint hook', doc.getElementById('drawerTitle').textContent === BLUEPRINT_HOOK);
+
+const proseStrong = Array.from(prose.querySelectorAll('strong')).map((n) => n.textContent);
+check('Bold markdown becomes <strong>',
+  proseStrong.includes('Trading hours for dollars has a hard physical ceiling.'),
+  JSON.stringify(proseStrong.slice(0, 4)));
+
+const proseEm = Array.from(prose.querySelectorAll('em')).map((n) => n.textContent);
+check('Italic markdown becomes <em>',
+  proseEm.some((t) => t.includes('fundamental truth about linear work')),
+  `got ${proseEm.length} em nodes`);
+
+const proseItems = Array.from(prose.querySelectorAll('ol > li')).map((n) => n.textContent);
+check('Numbered vehicles become a real ordered list',
+  proseItems.length === 4 &&
+  proseItems[0] === 'Digital products & knowledge assets' &&
+  proseItems[3] === 'Scalable digital memberships & wholesale networks',
+  JSON.stringify(proseItems));
+
+check('No raw asterisks survive in the rendered drawer',
+  !prose.textContent.includes('**') && !prose.textContent.includes('💬*'),
+  prose.textContent.slice(0, 80));
+
+doc.getElementById('drawerClose').click();
+
+/* Medium is written in markdown headings — they must render as headings,
+   not as lines starting with "###". */
+doc.querySelector('[data-channel="medium"]').click();
+const mediumProse = doc.querySelector('.drawer__prose');
+const mediumHeadings = Array.from(mediumProse.querySelectorAll('.drawer__prose-heading'))
+  .map((n) => n.textContent);
+check('Markdown "###" headings render as headings',
+  mediumHeadings.length === 4 &&
+  mediumHeadings[0] === 'Trading hours for dollars has a hard physical ceiling.',
+  JSON.stringify(mediumHeadings));
+check('No raw "###" markers survive',
+  !mediumProse.textContent.includes('###'));
+doc.getElementById('drawerClose').click();
+
+/* Saving a BluePrint piece must not leak into the travel library. */
+doc.querySelector('[data-channel="medium"]').click();
+doc.getElementById('drawerSaveBtn').click();
+
+const blueprintStored = JSON.parse(win.localStorage.getItem('tms.pieces.v1.blueprint') || '[]');
+const travelStored = JSON.parse(win.localStorage.getItem('tms.pieces.v1.travel') || '[]');
+check('Each profile keeps its own library',
+  blueprintStored.length === 1 && travelStored.length === 10,
+  `blueprint ${blueprintStored.length}, travel ${travelStored.length}`);
+
+check('The selected profile is remembered',
+  win.localStorage.getItem('tms.profile.v1') === 'blueprint');
 
 console.log('\n--------------------------------------------------------');
 console.log(`📊 TEST RESULTS: ${passed} Passed, ${failed} Failed.`);

@@ -3,73 +3,23 @@
    ------------------------------------------------------------
    Reverse-engineered from the published Base44 app
    (appId 6ad1b02d62830e19ceea7037, bundle index-Bn8LqwiW.js).
-   Copy, channels and structure mirror the original exactly;
-   the writer is a local, deterministic generator standing in
-   for the original's hosted LLM call.
+   Copy, channels and structure mirror the original exactly.
+
+   The engine is profile-driven: one source of truth → ten
+   platform-shaped pieces. Two profiles ship:
+
+     travel     the app's own loaded state (verified byte-identical
+                against the original's text)
+     blueprint  a technology-leverage business, with the original's
+                own LinkedIn output preserved verbatim
    ============================================================ */
 
 (function (global) {
   'use strict';
 
-  /* ---------------- Source of truth ---------------- */
-
-  var SOURCE = {
-    name: 'Invitation-Only Travel & Lifestyle Club',
-    blurb:
-      'Frequent travellers who book 4- and 5-star properties and resent retail booking ' +
-      'markups, plus people open to a referral-based income opportunity.',
-    status: 'Loaded',
-    summary: [
-      {
-        heading: 'Core Model & Value Proposition',
-        body:
-          'The business is a private, invitation-only travel and lifestyle club that bypasses ' +
-          'traditional retail booking markups to offer direct wholesale member pricing (up to 70% ' +
-          'off retail) across more than 1 million properties worldwide.'
-      },
-      {
-        heading: 'Dollar-for-Dollar Travel Equity',
-        body:
-          'All membership fees function like a vacation savings account. Every dollar spent converts ' +
-          '1-for-1 into travel equity points ($1 = 1 Point), which members use to buy down ' +
-          'out-of-pocket costs on curated, 4- and 5-star "Premium Escapes".'
-      },
-      {
-        heading: 'Membership Pricing Tiers',
-        body:
-          'African Launch Regional Tier: $250 initial setup + $50/month (yields 250 initial travel ' +
-          'points + 50 points/month).\nGlobal Tier: $450 initial setup + $99/month (yields 600 initial ' +
-          'travel points + 100 points/month).'
-      },
-      {
-        heading: 'Operational Cost Elimination ("Get 4, Pay No More")',
-        body:
-          'Referring 4 active members permanently waives the member\'s monthly membership dues. Even ' +
-          'with $0 out-of-pocket monthly fees, the member continues to accrue their monthly travel ' +
-          'equity points for free.'
-      },
-      {
-        heading: 'Compensation & Residual Wealth Engine',
-        body:
-          'Ambassadors earn income by sharing the opportunity through a Two-Team (binary) referral ' +
-          'network:\nResidual Growth: Monthly residual income scales based on total team volume, ' +
-          'ranging from $50/month (5 members left / 5 right) up to $85,000/month (5,000 left / 5,000 ' +
-          'right).\n30-Day Launch Multiplier: Hitting a reduced $5,000 regional volume target in the ' +
-          'first 30 days triggers a doubled "Amplify Bonus," generating up to $1,400 in initial ' +
-          'fast-start earnings.'
-      },
-      {
-        heading: 'Duplication & Closing System',
-        body:
-          'The business runs on a tool-driven duplication model - ambassadors share a standardized ' +
-          '20-minute recorded video overview rather than making sales pitches. Prospects are ' +
-          'categorized at the end using an A/B/C Framework:\nPath A: All-in Brand Ambassador + Member.\n' +
-          'Path B: Traveling Customer only.\nPath C: Not a fit.'
-      }
-    ]
-  };
-
-  /* ---------------- Channels ---------------- */
+  /* ============================================================
+     Channels
+     ============================================================ */
 
   var CHANNELS = [
     {
@@ -97,7 +47,7 @@
       cadence: 'Weekly refresh'
     },
     {
-      id: 'reddit',
+      id: 'redis',
       index: '04',
       name: 'Reddit',
       format: 'Community post',
@@ -154,9 +104,86 @@
     }
   ];
 
-  /* ---------------- Shared facts ---------------- */
+  /* ============================================================
+     Shared helpers
+     ============================================================ */
 
-  function facts(src) {
+  function lines() {
+    var out = [];
+    for (var i = 0; i < arguments.length; i++) out.push(arguments[i]);
+    return out.join('\n\n');
+  }
+
+  function getChannel(id) {
+    for (var i = 0; i < CHANNELS.length; i++) {
+      if (CHANNELS[i].id === id) return CHANNELS[i];
+    }
+    return null;
+  }
+
+  /* ============================================================
+     PROFILE 1 — Travel Club
+     The app's own loaded state. Text verified byte-for-byte
+     against the original.
+     ============================================================ */
+
+  var travelSource = {
+    name: 'Invitation-Only Travel & Lifestyle Club',
+    blurb:
+      'Frequent travellers who book 4- and 5-star properties and resent retail booking ' +
+      'markups, plus people open to a referral-based income opportunity.',
+    status: 'Loaded',
+    summary: [
+      {
+        heading: 'Core Model & Value Proposition',
+        body:
+          'The business is a private, invitation-only travel and lifestyle club that bypasses ' +
+          'traditional retail booking markups to offer direct wholesale member pricing (up to 70% ' +
+          'off retail) across more than 1 million properties worldwide.'
+      },
+      {
+        heading: 'Dollar-for-Dollar Travel Equity',
+        body:
+          'All membership fees function like a vacation savings account. Every dollar spent converts ' +
+          '1-for-1 into travel equity points ($1 = 1 Point), which members use to buy down ' +
+          'out-of-pocket costs on curated, 4- and 5-star "Premium Escapes".'
+      },
+      {
+        heading: 'Membership Pricing Tiers',
+        body:
+          'African Launch Regional Tier: $250 initial setup + $50/month (yields 250 initial travel ' +
+          'points + 50 points/month).\nGlobal Tier: $450 initial setup + $99/month (yields 600 initial ' +
+          'travel points + 100 points/month).'
+      },
+      {
+        heading: 'Operational Cost Elimination ("Get 4, Pay No More")',
+        body:
+          'Referring 4 active members permanently waives the member\'s monthly membership dues. Even ' +
+          'with $0 out-of-pocket monthly fees, the member continues to accrue their monthly travel ' +
+          'equity points for free.'
+      },
+      {
+        heading: 'Compensation & Residual Wealth Engine',
+        body:
+          'Ambassadors earn income by sharing the opportunity through a Two-Team (binary) referral ' +
+          'network:\nResidual Growth: Monthly residual income scales based on total team volume, ' +
+          'ranging from $50/month (5 members left / 5 right) up to $85,000/month (5,000 left / 5,000 ' +
+          'right).\n30-Day Launch Multiplier: Hitting a reduced $5,000 regional volume target in the ' +
+          'first 30 days triggers a doubled "Amplify Bonus," generating up to $1,400 in initial ' +
+          'fast-start earnings.'
+      },
+      {
+        heading: 'Duplication & Closing System',
+        body:
+          'The business runs on a tool-driven duplication model - ambassadors share a standardized ' +
+          '20-minute recorded video overview rather than making sales pitches. Prospects are ' +
+          'categorized at the end using an A/B/C Framework:\nPath A: All-in Brand Ambassador + Member.\n' +
+          'Path B: Traveling Customer only.\nPath C: Not a fit.'
+      }
+    ]
+  };
+
+  function travelFacts(src) {
     return {
       name: src.name,
       savings: 'up to 70% off retail',
@@ -178,15 +205,9 @@
     };
   }
 
-  function lines() {
-    var out = [];
-    for (var i = 0; i < arguments.length; i++) out.push(arguments[i]);
-    return out.join('\n\n');
-  }
+  /* The travel writers — unchanged, so the verified output stays byte-identical. */
 
-  /* ---------------- Per-channel writers ---------------- */
-
-  var WRITERS = {
+  var travelWriters = {
     linkedin: function (f) {
       return {
         title: 'Why pay retail for travel when you can access wholesale pricing?',
@@ -482,37 +503,511 @@
     }
   };
 
-  /* ---------------- Public API ---------------- */
+  /* ============================================================
+     PROFILE 2 — BluePrint
+     A technology-leverage business for tech professionals.
+     Its LinkedIn piece is the original's own output, kept
+     verbatim as the ground truth for the writer's voice.
+     ============================================================ */
+
+  var BLUEPRINT_LINKEDIN_TITLE =
+    'Most tech professionals spend their entire careers optimizing systems for organizations... ' +
+    'but rarely build a system for their own time freedom.';
+
+  var BLUEPRINT_LINKEDIN_BODY = lines(
+    '*A few years into my career as a Technology Specialist, I realized a fundamental truth about ' +
+      'linear work:*',
+    '**Trading hours for dollars has a hard physical ceiling.**',
+    '*No matter how skilled you are, there are only 160 working hours in a month. When you stop ' +
+      'working, the revenue stops immediately.*',
+    "*That’s why I started researching digital leverage—systems that build* **compounding, " +
+      'recurring value** *alongside a traditional career.*',
+    '*Instead of relying on a single paycheck, modern professionals are beginning to leverage 4 key ' +
+      'digital vehicles:*',
+    '1. *Digital products & knowledge assets*\n' +
+      '2. *Automated e-commerce funnels*\n' +
+      '3. *Real estate equity*\n' +
+      '4. *Scalable digital memberships & wholesale networks*',
+    '*Building recurring income isn\'t about quitting your day job tomorrow—it\'s about creating ' +
+      'financial options and time equity.*',
+    '*💬* **I put together a simple 1-page comparison breakdown contrasting Linear Salaries against ' +
+      'Modern Residual Vehicles.**',
+    '*If you’d like a copy, check out the link in my* **Featured Section** *on my profile, or send me ' +
+      'a DM with the word* **"BLUEPRINT"** *and I’ll send it right over!*'
+  );
+
+  var blueprintSource = {
+    name: 'BluePrint — Digital Leverage for Tech Professionals',
+    blurb:
+      'Technology Specialists trading hours for dollars against a hard 160-hour ceiling, building ' +
+      'compounding residual vehicles — digital products, automated funnels, real estate equity and ' +
+      'scalable memberships & wholesale networks — alongside a traditional career.',
+    status: 'Loaded',
+    summary: [
+      {
+        heading: 'Core Model & Value Proposition',
+        body:
+          'Most tech professionals spend their entire careers optimizing systems for organizations, ' +
+          'but rarely build a system for their own time freedom. BluePrint is a tool-driven ' +
+          'framework for Technology Specialists who want compounding, recurring value alongside a ' +
+          'traditional career — not a quit-your-job plan.'
+      },
+      {
+        heading: 'The Linear Ceiling',
+        body:
+          'Trading hours for dollars has a hard physical ceiling. No matter how skilled you are, ' +
+          'there are only 160 working hours in a month, and when you stop working, the revenue stops ' +
+          'immediately.'
+      },
+      {
+        heading: 'The Four Digital Vehicles',
+        body:
+          '1. Digital products & knowledge assets\n2. Automated e-commerce funnels\n3. Real estate ' +
+          'equity\n4. Scalable digital memberships & wholesale networks'
+      },
+      {
+        heading: 'The Lead Magnet',
+        body:
+          'A simple 1-page comparison breakdown contrasting Linear Salaries against Modern Residual ' +
+          'Vehicles, delivered via the link in the Featured Section or a DM with the keyword ' +
+          'BLUEPRINT.'
+      },
+      {
+        heading: 'The Operating System',
+        body:
+          'A few years into a career as a Technology Specialist, the founder started researching ' +
+          'digital leverage — systems that build compounding, recurring value. The offer is ' +
+          'educational and tool-driven: build the vehicles first, then let residual income compound.'
+      },
+      {
+        heading: 'The Positioning',
+        body:
+          'Building recurring income isn\'t about quitting your day job tomorrow — it\'s about ' +
+          'creating financial options and time equity.'
+      }
+    ]
+  };
+
+  /* Profile-driven writers. Used by any profile that does not ship a
+     bespoke writer set, so the engine works for a new business with
+     nothing but a source of truth. */
+
+  function genericWriters(profile) {
+    var f = profile.facts;
+    var lm = profile.leadMagnet;
+
+    return {
+      linkedin: function () {
+        return {
+          title: f.hook,
+          body: lines(
+            '*' + f.framing + '*',
+            '**' + f.truth + '**',
+            '*' + f.ceiling + '*',
+            '*' + f.pivot + '*',
+            '*' + f.intro + ' ' + f.vehicleCount + ' key digital vehicles:*',
+            f.vehicles.map(function (v, i) {
+              return i + 1 + '. *' + v + '*';
+            }).join('\n'),
+            '*' + f.closing + '*',
+            '*💬* **I put together ' + lm.name + '**',
+            '*If you’d like a copy, check out the link in my* **Featured Section** *on my profile, or ' +
+              'send me a DM with the word* **"' + lm.keyword + '"** *and I’ll send it right over!*'
+          ),
+          extras: [
+            { label: 'Tone', value: 'First-person, contrarian, practical' },
+            { label: 'Length', value: 'Approx. 170 words' }
+          ]
+        };
+      },
+
+      medium: function () {
+        return {
+          title: f.articleTitle,
+          body: lines(
+            f.framing,
+            '### ' + f.truth,
+            f.ceiling,
+            f.pivot,
+            '### The ' + f.vehicleCount + ' digital vehicles',
+            f.vehicles.map(function (v, i) {
+              return '**' + (i + 1) + '. ' + v + '**';
+            }).join('\n'),
+            '### Why it is built this way',
+            f.why,
+            '### What you actually get',
+            lm.name + ' — ' + lm.description,
+            f.closing
+          ),
+          extras: [
+            { label: 'Read time', value: 'Approx. 5 minutes' },
+            { label: 'Tags', value: f.tags }
+          ]
+        };
+      },
+
+      etsy: function () {
+        return {
+          title: lm.listingTitle,
+          body: lines(
+            'WHAT YOU GET',
+            '• ' + lm.name + ' — ' + lm.description,
+            '• A one-page comparison of ' + f.comparisonA + ' against ' + f.comparisonB,
+            '• A worked breakdown of ' + f.vehicleCount + ' digital vehicles',
+            '• A decision worksheet: linear salary against residual options',
+            '• A 90-day starter sequence you can run alongside a day job',
+            'WHO IT IS FOR',
+            f.audience,
+            'DETAILS',
+            'Instant digital download · PDF · print-friendly · updated for 2026'
+          ),
+          extras: [
+            { label: 'Tags', value: f.tags },
+            { label: 'Price point', value: '$9–$19' },
+            { label: 'License', value: 'Personal use, no resale' }
+          ]
+        };
+      },
+
+      reddit: function () {
+        return {
+          title: f.redditTitle,
+          body: lines(
+            'Genuine question for this sub, and I will keep it useful rather than promotional.',
+            f.ceiling,
+            'What is working for people I know:',
+            '• ' + f.vehicles[0] + ' — ' + f.vehicleDetail[0],
+            '• ' + f.vehicles[1] + ' — ' + f.vehicleDetail[1],
+            '• ' + f.vehicles[2] + ' — ' + f.vehicleDetail[2],
+            '• ' + f.vehicles[3] + ' — ' + f.vehicleDetail[3],
+            'The boring part nobody posts about: none of this replaces the day job on day one. The ' +
+              'advantage compounds only if you keep building it after the initial rush.',
+            'Happy to answer specifics on any of the above.'
+          ),
+          extras: [
+            { label: 'Subreddit', value: f.subreddits },
+            { label: 'Rule', value: 'Disclose affiliation if you are ever asked' },
+            { label: 'Tone', value: 'Informative, no hard sell' }
+          ]
+        };
+      },
+
+      facebook: function () {
+        return {
+          title: 'Page post',
+          body: lines(
+            f.hook,
+            f.ceiling,
+            f.pivot,
+            f.closing,
+            'We built ' + lm.name + ' — ' + lm.description,
+            'Comment "' + lm.keyword + '" and I will send it over, or check the link in my Featured ' +
+              'Section.'
+          ),
+          extras: [
+            { label: 'CTA', value: 'Comment "' + lm.keyword + '" for the copy' },
+            { label: 'Tone', value: 'Community-first, low pressure' }
+          ]
+        };
+      },
+
+      instagram: function () {
+        return {
+          title: 'Caption + carousel',
+          body: lines(
+            f.hook + ' ✈️',
+            f.ceiling,
+            f.pivot,
+            'Swipe for the ' + f.vehicleCount + ' slides that break the model down 👉',
+            'Save this one for the week you decide to build something that pays you back. ' +
+              'Send it to the friend who says residual income is a scam — ' + f.closing.toLowerCase(),
+            f.tags.replace(/, /g, ' ')
+          ),
+          extras: [
+            {
+              label: 'Carousel slides',
+              value: [
+                '1 — Cover: "' + f.hook + '"',
+                '2 — The linear ceiling, in one number',
+                '3 — What compounding actually means',
+                '4 — Vehicle 1: ' + f.vehicles[0],
+                '5 — Vehicle 2: ' + f.vehicles[1],
+                '6 — Vehicle 3: ' + f.vehicles[2],
+                '7 — Vehicle 4: ' + f.vehicles[3],
+                '8 — CTA: ask for the ' + lm.keyword + ' breakdown'
+              ].join('\n')
+            },
+            { label: 'Story script', value: 'Poll: "Is your income tied to your hours?" → "yes" → swipe up for the breakdown' }
+          ]
+        };
+      },
+
+      tiktok: function () {
+        return {
+          title: 'Short-form video script',
+          body: lines(
+            'HOOK (0–3s, on-screen text): "' + f.tiktokHook + '"',
+            'SHOT 1 (3–8s) — a clock on a wall, time-lapsing. Voiceover: "' + f.ceiling + '"',
+            'SHOT 2 (8–14s) — a laptop dashboard, graphs flattening. On-screen: "linear". ' +
+              'Voiceover: "Work stops, revenue stops."',
+            'SHOT 3 (14–22s) — four quick cuts, one per vehicle. Voiceover: "' + f.vehicleIntro + '"',
+            'SHOT 4 (22–30s) — a board with numbers climbing. Voiceover: "That is the part that ' +
+              'compounds."',
+            'SHOT 5 (30–38s) — talking head. Voiceover: "' + f.closing + '"',
+            'CLOSER (38–45s) — direct to camera. Voiceover: "' + lm.name + ' — link in bio, or ' +
+              'DM me ' + lm.keyword + '."',
+            'CAPTION: ' + f.hook + ' ' + f.tags.replace(/, /g, ' ')
+          ),
+          extras: [
+            { label: 'Length', value: '45 seconds' },
+            { label: 'Format', value: '9:16, caption burned in' },
+            { label: 'Audio', value: 'Trending mid-tempo, ducked under voiceover' }
+          ]
+        };
+      },
+
+      pinterest: function () {
+        return {
+          title: 'Pin titles + description',
+          body: lines(
+            'PIN TITLES',
+            '1. ' + f.pinTitle,
+            '2. The ' + f.vehicleCount + ' Residual Vehicles Every Tech Professional Should Know',
+            '3. ' + f.hook,
+            '4. Linear Salary vs Residual Income: A One-Page Comparison',
+            '5. How to Build Time Equity Alongside a Full-Time Role',
+            'PIN DESCRIPTION',
+            f.pivot + ' ' + lm.name + ' — ' + lm.description + ' Save this board before you build ' +
+              'your first vehicle, and compare ' + f.comparisonA + ' against ' + f.comparisonB + '.',
+            'BOARD NAME: ' + f.board
+          ),
+          extras: [
+            { label: 'Board', value: f.board },
+            { label: 'Image ratio', value: '2:3, tall' },
+            { label: 'Posting rhythm', value: '5–10 pins per day' }
+          ]
+        };
+      },
+
+      google: function () {
+        return {
+          title: 'Search listing',
+          body: lines(
+            'PAGE TITLE',
+            f.pageTitle,
+            'META DESCRIPTION (155 chars)',
+            f.metaDescription,
+            'INTRO COPY',
+            f.audience + ' ' + f.pivot,
+            'FAQs',
+            'Do I have to quit my job? No — the model is built to run alongside a traditional career. ' +
+              'What are the ' + f.vehicleCount + ' vehicles? ' + f.vehicles.join(', ') + '. ' +
+              'What does it cost? ' + lm.price + '. How do I get the breakdown? Via the Featured ' +
+              'Section link or a DM with the keyword ' + lm.keyword + '.'
+          ),
+          extras: [
+            { label: 'Canonical path', value: '/' },
+            { label: 'Schema', value: 'Organization + FAQPage' },
+            { label: 'Indexing', value: 'Request indexing after publish' }
+          ]
+        };
+      },
+
+      youtube: function () {
+        return {
+          title: 'Video package',
+          body: lines(
+            'TITLES',
+            '1. ' + f.youtubeTitle,
+            '2. The ' + f.vehicleCount + ' Residual Vehicles (And How to Start One This Month)',
+            '3. ' + f.hook,
+            'DESCRIPTION',
+            f.pivot + ' In this video I break down ' + f.comparisonA + ' against ' + f.comparisonB +
+              ', then walk through all ' + f.vehicleCount + ' digital vehicles with the real numbers.',
+            'Chapters: 00:00 the ceiling · 01:10 what compounding means · 03:25 vehicle 1 · 05:40 ' +
+              'vehicle 2 · 08:05 vehicle 3 · 10:20 vehicle 4 · 12:30 the blueprint',
+            'TAGS',
+            f.tags,
+            'OUTLINE',
+            '1. Cold open — the 160-hour ceiling',
+            '2. What ' + f.truth.toLowerCase() + ' means in practice',
+            f.vehicles.map(function (v, i) {
+              return (i + 3) + '. ' + v + ' — ' + f.vehicleDetail[i];
+            }).join('\n'),
+            '9. Close + the ' + lm.keyword + ' breakdown'
+          ),
+          extras: [
+            { label: 'Length', value: '14–16 minutes' },
+            { label: 'Thumbnail', value: 'A clock next to a rising residual chart' },
+            { label: 'Cards', value: '1 affiliate disclosure' }
+          ]
+        };
+      }
+    };
+  }
+
+  var blueprintFacts = {
+    hook: BLUEPRINT_LINKEDIN_TITLE,
+    articleTitle: 'The 160-Hour Ceiling: How Tech Professionals Build Residual Income Alongside a Career',
+    framing:
+      'A few years into my career as a Technology Specialist, I realized a fundamental truth about ' +
+      'linear work:',
+    truth: 'Trading hours for dollars has a hard physical ceiling.',
+    ceiling:
+      'No matter how skilled you are, there are only 160 working hours in a month. When you stop ' +
+      'working, the revenue stops immediately.',
+    pivot:
+      'That’s why I started researching digital leverage—systems that build compounding, recurring ' +
+      'value alongside a traditional career.',
+    intro: 'Instead of relying on a single paycheck, modern professionals are beginning to leverage',
+    vehicleCount: 4,
+    vehicles: [
+      'Digital products & knowledge assets',
+      'Automated e-commerce funnels',
+      'Real estate equity',
+      'Scalable digital memberships & wholesale networks'
+    ],
+    vehicleIntro: 'Four vehicles, and every one of them pays when you are not working',
+    vehicleDetail: [
+      'turn the systems you already understand into assets that sell while you sleep',
+      'automate the path from attention to checkout, so growth stops depending on hours',
+      'build equity in assets that produce income without a direct trade',
+      'memberships and wholesale networks that pay on volume, not on shifts'
+    ],
+    why:
+      'Because the bottleneck for a technical professional is rarely skill — it is the number of ' +
+      'hours left to sell. Each vehicle is built so that it keeps producing after the work stops.',
+    closing:
+      'Building recurring income isn\'t about quitting your day job tomorrow—it\'s about creating ' +
+      'financial options and time equity.',
+    comparisonA: 'Linear Salaries',
+    comparisonB: 'Modern Residual Vehicles',
+    audience:
+      'Technology Specialists and other knowledge workers who have already proven they can build ' +
+      'systems, and want those systems to pay them back.',
+    tags:
+      'residual income, tech professionals, passive income, digital leverage, side income, ' +
+      'time equity, automation',
+    subreddits: 'r/sidehustle, r/Entrepreneur, r/PersonalFinance, r/cscareerquestions',
+    redditTitle:
+      'Is anyone here actually building residual income alongside a full-time tech role?',
+    board: 'Residual Income Blueprints',
+    pinTitle: 'The 160-Hour Ceiling and How to Beat It',
+    pageTitle: 'BluePrint | Residual Income Vehicles for Tech Professionals',
+    metaDescription:
+      'A one-page comparison of Linear Salaries against Modern Residual Vehicles, and the four ' +
+      'digital vehicles that build time equity alongside your career.',
+    tiktokHook: 'Your income stops when you stop. That is the whole problem.',
+    youtubeTitle: 'I Built the 4 Residual Vehicles Every Tech Professional Should Know'
+  };
+
+  var blueprintLeadMagnet = {
+    name: 'a simple 1-page comparison breakdown contrasting Linear Salaries against Modern Residual Vehicles',
+    description: 'one page, no fluff — the ceiling, the four vehicles, and what to build first',
+    keyword: 'BLUEPRINT',
+    listingTitle:
+      'Residual Income BluePrint | 1-Page Linear Salary vs Residual Vehicles Comparison | Digital Download',
+    price: 'Free via Featured Section or DM',
+    board: 'Residual Income Blueprints'
+  };
+
+  /* ============================================================
+     Profiles
+     ============================================================ */
+
+  var PROFILES = {
+    travel: {
+      id: 'travel',
+      label: 'Travel Club',
+      source: travelSource,
+      facts: travelFacts,
+      writers: travelWriters,
+      hero: {
+        lines: ['Ten channels.', 'One travel brand.'],
+        lede:
+          'One content engine for your travel business — authority writing, short-form reach, ' +
+          'marketplace listings and search copy, each shaped for the audience that platform ' +
+          'actually rewards.'
+      },
+      canonical: null
+    },
+    blueprint: {
+      id: 'blueprint',
+      label: 'BluePrint',
+      source: blueprintSource,
+      facts: blueprintFacts,
+      leadMagnet: blueprintLeadMagnet,
+      hero: {
+        lines: ['Ten channels.', 'One blueprint.'],
+        lede:
+          'One content engine for your digital-leverage business — authority writing, short-form ' +
+          'reach, marketplace listings and search copy, each shaped for the audience that ' +
+          'platform actually rewards.'
+      },
+      writers: null, // resolved lazily — generic writers are built per profile
+      canonical: {
+        linkedin: {
+          title: BLUEPRINT_LINKEDIN_TITLE,
+          body: BLUEPRINT_LINKEDIN_BODY
+        }
+      }
+    }
+  };
+
+  function writersFor(profile) {
+    if (profile.writers) return profile.writers;
+    if (!profile._generic) profile._generic = genericWriters(profile);
+    return profile._generic;
+  }
+
+  /* ============================================================
+     Public API
+     ============================================================ */
 
   global.StudioModel = {
-    SOURCE: SOURCE,
     CHANNELS: CHANNELS,
-    getChannel: function (id) {
-      for (var i = 0; i < CHANNELS.length; i++) {
-        if (CHANNELS[i].id === id) return CHANNELS[i];
-      }
-      return null;
+    PROFILES: PROFILES,
+    DEFAULT_PROFILE: 'travel',
+
+    getProfile: function (id) {
+      return PROFILES[id] || PROFILES[global.StudioModel.DEFAULT_PROFILE];
     },
-    generate: function (channelId, source) {
-      var writer = WRITERS[channelId] || WRITERS.linkedin;
-      var src = source || SOURCE;
-      var piece = writer(facts(src));
+
+    getChannel: getChannel,
+
+    generate: function (channelId, profile) {
+      var p = profile || PROFILES[global.StudioModel.DEFAULT_PROFILE];
+      var ch = getChannel(channelId);
+
+      var piece;
+
+      if (p.canonical && p.canonical[channelId]) {
+        // The original's own output, kept verbatim.
+        piece = {
+          title: p.canonical[channelId].title,
+          body: p.canonical[channelId].body,
+          extras: [{ label: 'Source', value: 'Original output, preserved verbatim' }]
+        };
+      } else {
+        var writer = writersFor(p)[channelId] || writersFor(p).linkedin;
+        piece = writer(p.facts, p);
+      }
 
       piece.channel = channelId;
       piece.createdAt = new Date().toISOString();
-      piece.sourceName = src.name;
-
-      var ch = this.getChannel(channelId);
+      piece.sourceName = p.source.name;
+      piece.profile = p.id;
       piece.channelName = ch ? ch.name : channelId;
       piece.channelIndex = ch ? ch.index : '';
       piece.format = ch ? ch.format : '';
 
       return piece;
     },
-    generateAll: function (source) {
+
+    generateAll: function (profile) {
       var out = [];
       for (var i = 0; i < CHANNELS.length; i++) {
-        out.push(this.generate(CHANNELS[i].id, source));
+        out.push(this.generate(CHANNELS[i].id, profile));
       }
       return out;
     }

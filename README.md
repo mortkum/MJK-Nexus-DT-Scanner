@@ -81,7 +81,7 @@ Expected output:
 --------------------------------------------------------
 ```
 
-`npm test` also runs the **Travel Marketing Studio clone** suite (37 checks, jsdom):
+`npm test` also runs the **Travel Marketing Studio clone** suite (59 checks, jsdom):
 
 ```bash
 npm run test:studio   # just the clone suite
@@ -95,15 +95,18 @@ npm run test:studio   # just the clone suite
 • Business Overview Summary has all 6 sections... PASSED
 • Every summary section matches the verbatim original text... PASSED
 • Expanded toggle reads "Collapse"... PASSED
+• BluePrint LinkedIn body is the original post verbatim... PASSED
+• Bold markdown becomes <strong>... PASSED
 • Write opens the piece drawer... PASSED
 • Write all ten produces 10 pieces... PASSED
 • Library lists every piece... PASSED
 • Channel filter narrows the library... PASSED
 • Distribution plan lists all 10 channels... PASSED
+• Each profile keeps its own library... PASSED
 • Deep link to /library opens the library view... PASSED
 • Pieces are persisted to localStorage... PASSED
 --------------------------------------------------------
-📊 TEST RESULTS: 37 Passed, 0 Failed.
+📊 TEST RESULTS: 59 Passed, 0 Failed.
 ✅ TRAVEL MARKETING STUDIO CLONE VERIFIED!
 ```
 
@@ -187,7 +190,7 @@ double-pattern-scanner/
 │
 └── test/
     ├── run-tests.js            # Automated 10-point test runner
-    └── studio.test.js          # 37-check DOM test suite for the Travel Marketing Studio clone
+    └── studio.test.js          # 59-check DOM test suite for the Travel Marketing Studio clone
 ```
 
 ---

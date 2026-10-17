@@ -302,15 +302,35 @@ weltradeApp.get('/api/watchlist', (req, res) => res.json({ broker: 'Weltrade', w
 weltradeApp.get('/api/code/pinescript', (req, res) => res.type('text/plain').send(getPineScriptCode()));
 weltradeApp.get('/api/code/mql5', (req, res) => res.type('text/plain').send(getWeltradeMQL5Code()));
 
+// ⚡ PORT 3002 — dedicated PREVIEW port for the Travel Marketing Studio clone.
+// The studio is served at both `/` and `/travelpulse` so the preview URL lands
+// on the app directly; the Deriv scanner keeps its own `/deriv` mount plus all
+// of its API routes below, so nothing that used to live on this port is lost.
 const derivApp = express();
 derivApp.use(cors());
 derivApp.use(express.json());
-derivApp.use(express.static(publicDerivPath));
+
+derivApp.use('/travelpulse', express.static(publicTravelPulsePath));
+derivApp.use('/deriv', express.static(publicDerivPath));
+
+// API routes first, so the SPA fallback below never swallows them.
 derivApp.get('/api/scan', (req, res) => { req.query.broker = 'deriv'; app._router.handle(req, res); });
 derivApp.get('/api/candles', (req, res) => { req.query.broker = 'deriv'; app._router.handle(req, res); });
 derivApp.get('/api/watchlist', (req, res) => res.json({ broker: 'Deriv', watchlist: DERIV_WATCHLIST, timeframes: TIMEFRAMES }));
 derivApp.get('/api/code/pinescript', (req, res) => res.type('text/plain').send(getPineScriptCode()));
 derivApp.get('/api/code/mql5', (req, res) => res.type('text/plain').send(getDerivMQL5Code()));
+
+// The studio at the root of the preview port. Static first, then the SPA
+// fallback so the studio's own routes (/library, /plan) resolve on 3002 too.
+derivApp.use(express.static(publicTravelPulsePath));
+derivApp.use('/travelpulse', (req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  res.sendFile(path.join(publicTravelPulsePath, 'index.html'));
+});
+derivApp.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  res.sendFile(path.join(publicTravelPulsePath, 'index.html'));
+});
 
 // Start servers (Dual Stack listening on 0.0.0.0 for live preview and local access)
 app.listen(PORT_MAIN, '0.0.0.0', () => {
@@ -322,14 +342,17 @@ weltradeApp.listen(PORT_WELTRADE, '0.0.0.0', () => {
 });
 
 derivApp.listen(PORT_DERIV, '0.0.0.0', () => {
-  console.log(`⚡ [Port 3002] Deriv Synthetic Indices running at: http://0.0.0.0:${PORT_DERIV}`);
+  console.log(`⚡ [Port ${PORT_DERIV}] Travel Marketing Studio PREVIEW: http://0.0.0.0:${PORT_DERIV}`);
+  console.log(`  • Studio (root):            http://localhost:${PORT_DERIV}/`);
+  console.log(`  • Studio alias:             http://localhost:${PORT_DERIV}/travelpulse`);
+  console.log(`  • Deriv scanner (preserved):http://localhost:${PORT_DERIV}/deriv`);
   console.log(`\n========================================================`);
   console.log(`  🚀 TRADING RADAR ACTIVE - ACCESS ANY OPTION BELOW:`);
   console.log(`  • MAIN HUB (All 3 Brokers): http://localhost:${PORT_MAIN}`);
   console.log(`  • Weltrade on Hub:          http://localhost:${PORT_MAIN}/?broker=weltrade`);
   console.log(`  • Deriv on Hub:             http://localhost:${PORT_MAIN}/?broker=deriv`);
   console.log(`  • Standalone Weltrade Port: http://127.0.0.1:${PORT_WELTRADE}`);
-  console.log(`  • Standalone Deriv Port:    http://127.0.0.1:${PORT_DERIV}`);
-  console.log(`  • TravelPulse clone:        http://localhost:${PORT_MAIN}/travelpulse`);
+  console.log(`  • TravelPulse studio:       http://localhost:${PORT_DERIV}/  (preview port)`);
+  console.log(`  • TravelPulse on hub:       http://localhost:${PORT_MAIN}/travelpulse`);
   console.log(`========================================================\n`);
 });

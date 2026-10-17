@@ -20,7 +20,36 @@ internet connection at all.
 
 ---
 
-## Option 1 — Clone and run (recommended)
+## Option 1 — Open one file (easiest, nothing to install)
+
+**`travel-marketing-studio.html`** (~233 KB) is the studio compiled into a
+**single self-contained file**. Download it from the workspace Files panel and
+double-click it.
+
+That is it. No Node.js, no `npm install`, no server, no network — and because it
+opens from disk over `file://`, Symantec's web protection never inspects it.
+
+Everything is embedded inside the one file:
+
+* the full HTML and CSS
+* both JavaScript files (the studio engine and the app shell)
+* all three fonts (Fraunces, Inter, JetBrains Mono) as base64 `woff2`
+* the favicon
+
+Browsing still works: the Content desk / Library / Distribution plan views use
+hash routing (`#library`, `#plan`) because `file://` forbids history
+`pushState`. Pieces you write are stored in the browser's `localStorage`.
+
+To regenerate it after changing the source:
+
+```bash
+npm run build:standalone     # writes travel-marketing-studio.html
+npm run test:standalone      # verifies it stayed self-contained
+```
+
+---
+
+## Option 2 — Clone and run
 
 The repo is public: <https://github.com/mortkum/MJK-Nexus-DT-Scanner>
 
@@ -57,7 +86,7 @@ If it is not executable: `chmod +x start.sh && ./start.sh`
 
 ---
 
-## Option 2 — Download the zip
+## Option 3 — Download the full zip
 
 1. Download `travel-marketing-studio-local.zip` from the workspace **Files** panel
 2. Extract to `C:\travel-marketing-studio\` or `~/travel-marketing-studio/`
@@ -67,7 +96,7 @@ Node.js 18+ is required: <https://nodejs.org/>
 
 ---
 
-## Option 3 — Whitelist in Symantec (needs admin rights)
+## Option 4 — Whitelist in Symantec (needs admin rights)
 
 If IT will allow it, ask for these to be added as trusted exceptions:
 
@@ -84,7 +113,7 @@ Without admin rights this option is not available — use Option 1.
 
 ---
 
-## Option 4 — GitHub Codespaces
+## Option 5 — GitHub Codespaces
 
 Also unaffected by the local Symantec install:
 
@@ -118,6 +147,4 @@ The app is healthy. The only broken link is the one Symantec refuses to open.
 
 ## Still can't run it locally?
 
-Tell me and I will package the studio as a **single self-contained HTML file**
-with no server and no `npm install` — openable by double-click from disk
-(`file://`), which Symantec does not inspect.
+The single-file build above is exactly that — see **Option 1**.

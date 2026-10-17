@@ -4,8 +4,10 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/run-tests.js && node test/studio.test.js",
-    "test:studio": "node test/studio.test.js"
+    "test": "node test/run-tests.js && node test/studio.test.js && node test/standalone.test.js",
+    "test:studio": "node test/studio.test.js",
+    "build:standalone": "node tools/build-single-file.js",
+    "test:standalone": "node test/standalone.test.js"
   },
   "keywords": [],
   "author": "",

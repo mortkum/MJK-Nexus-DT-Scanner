@@ -81,6 +81,17 @@ Expected output:
 --------------------------------------------------------
 ```
 
+### Standalone single file
+
+```bash
+npm run build:standalone      # -> travel-marketing-studio.html (~233 KB)
+```
+
+Compiles the studio into one self-contained HTML file — CSS, both JS files, all
+three fonts and the favicon inlined. Open it by double-click; no server, no
+`npm install`, no network. `npm run test:standalone` verifies it stayed
+self-contained.
+
 `npm test` also runs the **Travel Marketing Studio clone** suite (59 checks, jsdom):
 
 ```bash

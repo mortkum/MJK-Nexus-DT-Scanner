@@ -18,7 +18,14 @@
 
   /* ---------------- Base path ---------------- */
 
+  // Opened straight from disk (the single-file build), history.pushState is
+  // not permitted on a file:// origin. Fall back to hash routing there so the
+  // app behaves identically without a server.
+  var IS_FILE = window.location.protocol === 'file:';
+
   var BASE = (function () {
+    if (IS_FILE) return '';
+
     var scripts = document.getElementsByTagName('script');
     var last = scripts[scripts.length - 1];
     var src = last && last.src ? last.src : window.location.href;
@@ -625,6 +632,11 @@
   /* ---------------- Routing ---------------- */
 
   function routeFromPath() {
+    if (IS_FILE) {
+      var hash = String(window.location.hash || '').replace(/^#/, '');
+      return hash === 'library' || hash === 'plan' ? hash : 'desk';
+    }
+
     var path = window.location.pathname;
     if (path.indexOf(BASE) === 0) path = path.slice(BASE.length);
     path = path.replace(/^\/+|\/+$/g, '');
@@ -635,8 +647,16 @@
   function navigate(route, push) {
     state.route = route;
     if (push !== false) {
-      var url = route === 'desk' ? BASE + '/' : BASE + '/' + route;
-      if (window.location.pathname !== url) window.history.pushState({ route: route }, '', url);
+      if (IS_FILE) {
+        var hash = route === 'desk' ? '' : '#' + route;
+        if ((window.location.hash || '') !== hash) {
+          if (hash) window.location.hash = hash;
+          else window.history.replaceState(null, '', window.location.pathname);
+        }
+      } else {
+        var url = route === 'desk' ? BASE + '/' : BASE + '/' + route;
+        if (window.location.pathname !== url) window.history.pushState({ route: route }, '', url);
+      }
     }
 
     Object.keys(el.views).forEach(function (key) {
@@ -738,6 +758,10 @@
   });
 
   window.addEventListener('popstate', function () {
+    navigate(routeFromPath(), false);
+  });
+
+  window.addEventListener('hashchange', function () {
     navigate(routeFromPath(), false);
   });
 

@@ -346,6 +346,12 @@ derivApp.listen(PORT_DERIV, '0.0.0.0', () => {
   console.log(`  • Studio (root):            http://localhost:${PORT_DERIV}/`);
   console.log(`  • Studio alias:             http://localhost:${PORT_DERIV}/travelpulse`);
   console.log(`  • Deriv scanner (preserved):http://localhost:${PORT_DERIV}/deriv`);
+  // The sandbox is recreated between sessions, so its public hostname changes.
+  // Print the live one so a stale preview link is never used by mistake.
+  if (process.env.E2B_SANDBOX_ID) {
+    console.log(`\n  🌍 PUBLIC PREVIEW (share this one):`);
+    console.log(`     https://${PORT_DERIV}-${process.env.E2B_SANDBOX_ID}.e2b.app/`);
+  }
   console.log(`\n========================================================`);
   console.log(`  🚀 TRADING RADAR ACTIVE - ACCESS ANY OPTION BELOW:`);
   console.log(`  • MAIN HUB (All 3 Brokers): http://localhost:${PORT_MAIN}`);

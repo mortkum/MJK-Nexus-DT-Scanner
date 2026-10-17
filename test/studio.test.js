@@ -76,6 +76,62 @@ check('Business Overview Summary has all 6 sections',
   doc.querySelectorAll('.summary__section').length === 6,
   `got ${doc.querySelectorAll('.summary__section').length}`);
 
+/* ---------- 1a. Source of truth is the verbatim original ---------- */
+
+const EXPECTED_SECTIONS = [
+  ['Core Model & Value Proposition',
+   'The business is a private, invitation-only travel and lifestyle club that bypasses traditional retail booking markups to offer direct wholesale member pricing (up to 70% off retail) across more than 1 million properties worldwide.'],
+  ['Dollar-for-Dollar Travel Equity',
+   'All membership fees function like a vacation savings account. Every dollar spent converts 1-for-1 into travel equity points ($1 = 1 Point), which members use to buy down out-of-pocket costs on curated, 4- and 5-star "Premium Escapes".'],
+  ['Membership Pricing Tiers',
+   'African Launch Regional Tier: $250 initial setup + $50/month (yields 250 initial travel points + 50 points/month).\nGlobal Tier: $450 initial setup + $99/month (yields 600 initial travel points + 100 points/month).'],
+  ['Operational Cost Elimination ("Get 4, Pay No More")',
+   "Referring 4 active members permanently waives the member's monthly membership dues. Even with $0 out-of-pocket monthly fees, the member continues to accrue their monthly travel equity points for free."],
+  ['Compensation & Residual Wealth Engine',
+   'Ambassadors earn income by sharing the opportunity through a Two-Team (binary) referral network:\nResidual Growth: Monthly residual income scales based on total team volume, ranging from $50/month (5 members left / 5 right) up to $85,000/month (5,000 left / 5,000 right).\n30-Day Launch Multiplier: Hitting a reduced $5,000 regional volume target in the first 30 days triggers a doubled "Amplify Bonus," generating up to $1,400 in initial fast-start earnings.'],
+  ['Duplication & Closing System',
+   'The business runs on a tool-driven duplication model - ambassadors share a standardized 20-minute recorded video overview rather than making sales pitches. Prospects are categorized at the end using an A/B/C Framework:\nPath A: All-in Brand Ambassador + Member.\nPath B: Traveling Customer only.\nPath C: Not a fit.']
+];
+
+const renderedSections = Array.from(doc.querySelectorAll('.summary__section')).map((s) => [
+  s.querySelector('h4').textContent,
+  s.querySelector('p').textContent
+]);
+
+check('Every summary section matches the verbatim original text',
+  JSON.stringify(renderedSections) === JSON.stringify(EXPECTED_SECTIONS));
+
+check('Source of truth name and blurb match the original',
+  doc.getElementById('sourceName').textContent === 'Invitation-Only Travel & Lifestyle Club' &&
+  doc.getElementById('sourceBlurb').textContent ===
+  'Frequent travellers who book 4- and 5-star properties and resent retail booking markups, plus people open to a referral-based income opportunity.');
+
+/* ---------- 1b. The summary disclosure matches the original ---------- */
+
+const summaryToggle = doc.getElementById('summaryToggle');
+const summaryLabel = doc.getElementById('summaryToggleLabel');
+const summaryBody = doc.getElementById('summaryContent');
+
+check('Summary heading reads "Business Overview Summary"',
+  doc.querySelector('.summary__heading').textContent === 'Business Overview Summary');
+check('Collapsed toggle reads "Read full summary"',
+  summaryLabel.textContent === 'Read full summary');
+check('Summary body is hidden when collapsed',
+  summaryBody.classList.contains('is-hidden'));
+
+summaryToggle.click();
+check('Expanded toggle reads "Collapse"',
+  summaryLabel.textContent === 'Collapse');
+check('Summary body is visible when expanded',
+  !summaryBody.classList.contains('is-hidden'));
+check('Toggle reports aria-expanded',
+  summaryToggle.getAttribute('aria-expanded') === 'true');
+
+summaryToggle.click();
+check('Collapsing restores "Read full summary"',
+  summaryLabel.textContent === 'Read full summary' &&
+  summaryBody.classList.contains('is-hidden'));
+
 check('New channels start with "No content yet"',
   doc.querySelector('.channel__state').textContent === 'No content yet');
 

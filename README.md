@@ -81,7 +81,7 @@ Expected output:
 --------------------------------------------------------
 ```
 
-`npm test` also runs the **Travel Marketing Studio clone** suite (28 checks, jsdom):
+`npm test` also runs the **Travel Marketing Studio clone** suite (37 checks, jsdom):
 
 ```bash
 npm run test:studio   # just the clone suite
@@ -93,6 +93,8 @@ npm run test:studio   # just the clone suite
 • Hero headline matches the original copy... PASSED
 • Source of truth is loaded... PASSED
 • Business Overview Summary has all 6 sections... PASSED
+• Every summary section matches the verbatim original text... PASSED
+• Expanded toggle reads "Collapse"... PASSED
 • Write opens the piece drawer... PASSED
 • Write all ten produces 10 pieces... PASSED
 • Library lists every piece... PASSED
@@ -101,7 +103,7 @@ npm run test:studio   # just the clone suite
 • Deep link to /library opens the library view... PASSED
 • Pieces are persisted to localStorage... PASSED
 --------------------------------------------------------
-📊 TEST RESULTS: 28 Passed, 0 Failed.
+📊 TEST RESULTS: 37 Passed, 0 Failed.
 ✅ TRAVEL MARKETING STUDIO CLONE VERIFIED!
 ```
 
@@ -185,7 +187,7 @@ double-pattern-scanner/
 │
 └── test/
     ├── run-tests.js            # Automated 10-point test runner
-    └── studio.test.js          # 28-check DOM test suite for the Travel Marketing Studio clone
+    └── studio.test.js          # 37-check DOM test suite for the Travel Marketing Studio clone
 ```
 
 ---

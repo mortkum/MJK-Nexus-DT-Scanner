@@ -58,13 +58,15 @@
           markups, plus people open to a referral-based income opportunity.
         </p>
 
-        <details class="summary" id="summaryBlock">
-          <summary class="summary__toggle">
-            <span class="summary__label">Business Overview Summary</span>
-            <span class="summary__hint">Read full summary</span>
-          </summary>
-          <div class="summary__content" id="summaryContent"></div>
-        </details>
+        <div class="summary" id="summaryBlock">
+          <h3 class="summary__heading">Business Overview Summary</h3>
+          <div class="summary__content is-hidden" id="summaryContent"></div>
+          <button class="summary__toggle" id="summaryToggle" type="button"
+                  aria-expanded="false" aria-controls="summaryContent">
+            <span class="summary__hint" id="summaryToggleLabel">Read full summary</span>
+            <span class="summary__caret" aria-hidden="true"></span>
+          </button>
+        </div>
 
         <div class="panel__actions">
           <button class="btn btn--ghost" id="editSourceBtn" type="button">Edit source of truth</button>

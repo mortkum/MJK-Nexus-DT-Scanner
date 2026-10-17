@@ -111,6 +111,12 @@ slate `#A9B6C1` secondary.
 
 * The hero, lede, source-of-truth blurb and all six **Business Overview Summary** sections are
   the original's copy, verbatim.
+* The source of truth was **diffed field-by-field against the text supplied by the app's owner**
+  — name, blurb, status and all six section headings and bodies match **byte-for-byte**
+  (14/14 fields identical). The test suite now asserts the verbatim text, so it cannot drift.
+* The summary disclosure reproduces the original's structure: a `Business Overview Summary`
+  heading, the body beneath it, and a toggle underneath that reads **"Read full summary"** when
+  collapsed and **"Collapse"** once open.
 * The ten channels (LinkedIn, Medium, Etsy, Reddit, Facebook, Instagram, TikTok, Pinterest,
   Google, YouTube) keep the original's order, numbering, format labels and descriptions.
 * The generated **LinkedIn** piece opens with the original's live hook — *"Why pay retail for
@@ -136,14 +142,15 @@ completion endpoint — the UI contract does not change.
 `test/studio.test.js` loads the clone into a real DOM (jsdom) and drives it like a user:
 
 ```bash
-npm test          # existing 10 scanner tests + the 28 studio checks
+npm test          # existing 10 scanner tests + the 37 studio checks
 npm run test:studio
 ```
 
-28/28 checks pass, covering: the ten channels and their order, the original's hero copy, the
-source of truth and its six summary sections, writing a single channel, the drawer, saving,
-"Write all ten" refreshing rather than duplicating, library filters, the distribution plan's
-readiness states, deep links to `/library`, and `localStorage` persistence.
+37/37 checks pass, covering: the ten channels and their order, the original's hero copy, the
+source of truth and its six summary sections **matched against the verbatim original text**, the
+summary disclosure's "Read full summary" ⇄ "Collapse" toggle, writing a single channel, the
+drawer, saving, "Write all ten" refreshing rather than duplicating, library filters, the
+distribution plan's readiness states, deep links to `/library`, and `localStorage` persistence.
 
 ---
 

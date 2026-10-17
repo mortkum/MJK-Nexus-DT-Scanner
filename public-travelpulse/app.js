@@ -86,6 +86,8 @@
     sourceBlurb: document.getElementById('sourceBlurb'),
     sourceStatus: document.getElementById('sourceStatus'),
     summaryContent: document.getElementById('summaryContent'),
+    summaryToggle: document.getElementById('summaryToggle'),
+    summaryToggleLabel: document.getElementById('summaryToggleLabel'),
     drawer: document.getElementById('drawer'),
     drawerEyebrow: document.getElementById('drawerEyebrow'),
     drawerTitle: document.getElementById('drawerTitle'),
@@ -512,6 +514,22 @@
   });
 
   el.writeAllBtn.addEventListener('click', writeAll);
+
+  /* ---------- Source-of-truth disclosure ----------
+     The original shows a "Business Overview Summary" heading, the body, and a
+     toggle underneath that reads "Read full summary" when collapsed and
+     "Collapse" once the body is open. */
+
+  function setSummaryOpen(open) {
+    el.summaryContent.classList.toggle('is-hidden', !open);
+    el.summaryToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    el.summaryToggleLabel.textContent = open ? 'Collapse' : 'Read full summary';
+  }
+
+  el.summaryToggle.addEventListener('click', function () {
+    setSummaryOpen(el.summaryContent.classList.contains('is-hidden'));
+  });
+
   el.myOwnPieceBtn.addEventListener('click', function () {
     openDrawer({
       channelIndex: '',

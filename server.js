@@ -346,11 +346,14 @@ derivApp.listen(PORT_DERIV, '0.0.0.0', () => {
   console.log(`  • Studio (root):            http://localhost:${PORT_DERIV}/`);
   console.log(`  • Studio alias:             http://localhost:${PORT_DERIV}/travelpulse`);
   console.log(`  • Deriv scanner (preserved):http://localhost:${PORT_DERIV}/deriv`);
-  // The sandbox is recreated between sessions, so its public hostname changes.
-  // Print the live one so a stale preview link is never used by mistake.
+  // The sandbox is recreated between turns, and public access requires a
+  // traffic token that only the Arena preview proxy injects. A URL pasted
+  // straight into a browser therefore cannot work — open the app from the
+  // LIVE PREVIEW panel instead.
   if (process.env.E2B_SANDBOX_ID) {
-    console.log(`\n  🌍 PUBLIC PREVIEW (share this one):`);
-    console.log(`     https://${PORT_DERIV}-${process.env.E2B_SANDBOX_ID}.e2b.app/`);
+    console.log(`\n  🌍 LIVE PREVIEW: open the panel in Arena (port ${PORT_DERIV}).`);
+    console.log(`     Backing sandbox: ${process.env.E2B_SANDBOX_ID}`);
+    console.log(`     Paste-able URLs will 403 / 502 — the proxy injects the token.`);
   }
   console.log(`\n========================================================`);
   console.log(`  🚀 TRADING RADAR ACTIVE - ACCESS ANY OPTION BELOW:`);

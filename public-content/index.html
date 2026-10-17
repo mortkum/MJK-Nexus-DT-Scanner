@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f7f5ef">
+  <title>Atlas Studio — Travel Content Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/content-engine/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#"><span class="brand-mark">A</span><span>ATLAS <small>CONTENT STUDIO</small></span></a>
+      <div class="workspace-label">WORKSPACE</div>
+      <button class="nav-item active"><span>✳</span> Create content</button>
+      <button class="nav-item" id="savedNav"><span>▣</span> Saved drafts <b id="savedCount">0</b></button>
+      <div class="sidebar-note"><span class="spark">✦</span><strong>One idea. Ten native voices.</strong><p>Start with a single travel insight. Atlas shapes it for every channel, without making every post sound the same.</p></div>
+      <div class="source-card"><span class="eyebrow">BRAND SOURCE OF TRUTH</span><strong>Invitation-only travel &amp; lifestyle club</strong><p>Member pricing, travel equity and a referral-based opportunity—explained clearly, never overpromised.</p><button id="sourceBtn">View business facts <span>↗</span></button></div>
+      <div class="sidebar-foot"><span class="status-dot"></span> Business context loaded</div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div class="crumb">WORKSPACE <span>/</span> CONTENT ENGINE</div><div class="top-actions"><span class="local-pill"><i></i> Drafts save on this device</span><button class="avatar" aria-label="Profile">A</button></div></header>
+      <section class="hero"><div><div class="eyebrow">YOUR TRAVEL BRAND, EVERYWHERE</div><h1>Turn one idea into<br><em>everywhere-ready</em> content.</h1><p>Build one clear message, then tailor it to the formats and audiences each platform expects.</p></div><div class="hero-art" aria-hidden="true"><div class="sun"></div><div class="arch arch-one"></div><div class="arch arch-two"></div><span>TRAVEL<br>WITH INTENTION</span></div></section>
+      <section class="composer panel">
+        <div class="section-heading"><div><span class="step">01</span><div><h2>Shape your core idea</h2><p>Give the engine a starting point. You can edit every result before publishing.</p></div></div><span class="context-badge"><span>✦</span> Club facts applied</span></div>
+        <div class="form-grid">
+          <label class="field wide"><span>What do you want to talk about?</span><textarea id="idea" rows="3" placeholder="e.g. How frequent travellers can look beyond retail booking prices when planning a premium stay..."></textarea><small>Write a rough thought, question, experience, or offer. Keep it to one idea.</small></label>
+          <label class="field"><span>Who is this for?</span><select id="audience"><option value="traveller">Frequent premium travellers</option><option value="opportunity">People exploring a referral-based income opportunity</option><option value="both">Both audiences</option></select></label>
+          <label class="field"><span>Content intent</span><select id="intent"><option value="educate">Teach / build authority</option><option value="inspire">Inspire travel</option><option value="explain">Explain how the club works</option><option value="invite">Invite a conversation</option></select></label>
+          <label class="field wide"><span>Call to action <em>optional</em></span><input id="cta" value="Message me for the private overview" placeholder="e.g. Save this for your next trip"><small>Keep the invitation natural and low-pressure.</small></label>
+        </div>
+        <div class="composer-footer"><div class="disclosure"><span>ⓘ</span> Income outcomes vary. Avoid guaranteed savings, travel availability, or earnings claims.</div><button class="generate" id="generateBtn"><span>✦</span> Generate 10 platform drafts <b>→</b></button></div>
+      </section>
+      <section class="results" id="results" hidden>
+        <div class="results-head"><div><span class="eyebrow">02 · YOUR CONTENT SUITE</span><h2>One message, ten native drafts.</h2><p>Review, refine and copy each version. Nothing is published automatically.</p></div><button class="secondary" id="regenerateBtn">↻ Regenerate drafts</button></div>
+        <div class="platform-tabs" id="platformTabs"></div>
+        <div class="content-grid" id="contentGrid"></div>
+      </section>
+      <footer>ATLAS STUDIO <span>·</span> Built for thoughtful travel storytellers <span class="footer-right">Content is a starting point. Review platform rules and business disclosures before publishing.</span></footer>
+    </main>
+  </div>
+  <div class="modal-backdrop" id="modal" hidden><div class="modal"><button class="modal-close" id="closeModal">×</button><span class="eyebrow">BUSINESS SOURCE OF TRUTH</span><h2>Facts to keep every post grounded.</h2><p class="modal-intro">These are the supplied business details. Generated copy should preserve their qualifications and not imply guaranteed outcomes.</p><div class="facts-grid" id="facts"></div><div class="modal-warning"><strong>Publishing note</strong><p>Verify current pricing, property availability, eligibility, and local compliance before publishing. Referral income is not guaranteed; actual results depend on individual and team performance.</p></div></div></div>
+  <div class="toast" id="toast"></div>
+  <script src="/content-engine/app.js"></script>
+</body>
+</html>

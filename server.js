@@ -163,6 +163,11 @@ app.use(express.json());
 // Mount dedicated paths
 app.use('/weltrade', express.static(publicWeltradePath));
 app.use('/deriv', express.static(publicDerivPath));
+const publicContentPath = path.join(__dirname, 'public-content');
+app.use('/content-engine', express.static(publicContentPath));
+app.get('/content-engine', (req, res) => res.sendFile(path.join(publicContentPath, 'index.html')));
+app.get('/', (req, res) => res.sendFile(path.join(publicContentPath, 'index.html')));
+app.get('/scanner', (req, res) => res.sendFile(path.join(publicMainPath, 'index.html')));
 app.use(express.static(publicMainPath));
 
 // In-memory caches

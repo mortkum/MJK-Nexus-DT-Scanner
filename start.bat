@@ -1,5 +1,5 @@
 @echo off
-echo ⚡ Nexus DT/DB Scanner - Starting...
+echo ⚡ Nexus / Travel Marketing Studio - Starting...
 where node >nul 2>nul
 if %ERRORLEVEL% NEQ 0 (
   echo ❌ Node.js not found! Install from https://nodejs.org/
@@ -10,11 +10,14 @@ if not exist node_modules (
   echo 📦 Installing dependencies...
   call npm install
 )
-echo 🚀 Starting on http://localhost:3000
-echo Main Hub: http://localhost:3000
-echo Weltrade: http://localhost:3000/?broker=weltrade
-echo Deriv: http://localhost:3000/?broker=deriv
-echo TravelPulse clone: http://localhost:3000/travelpulse
-start http://localhost:3000
+echo.
+echo 🚀 Starting servers (localhost is never blocked by Symantec):
+echo    Travel Marketing Studio: http://localhost:3002
+echo    Studio (hub alias):      http://localhost:3000/travelpulse
+echo    Scanner hub:             http://localhost:3000
+echo    Weltrade:                http://localhost:3000/?broker=weltrade
+echo    Deriv:                   http://localhost:3000/?broker=deriv
+echo.
+start http://localhost:3002
 node server.js
 pause

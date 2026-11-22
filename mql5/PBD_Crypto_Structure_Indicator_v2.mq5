@@ -908,8 +908,12 @@ int OnInit()
 
    if(InpEnableChartShift && InpShowPriceTags)
      {
-      ChartSetInteger(0, CHART_SHIFT, true);
-      ChartSetInteger(0, CHART_SHIFT_SIZE, (long)MathMax(5, InpRightPadBars * 2));
+      // Explicit enum casts + long arguments: some MetaEditor builds treat
+      // CHART_SHIFT / CHART_SHIFT_SIZE as ambiguous enum constants, which
+      // breaks ChartSetInteger overload resolution ("cannot convert enum",
+      // "wrong parameters count") unless cast explicitly.
+      ChartSetInteger(ChartID(), (ENUM_CHART_PROPERTY_INTEGER)CHART_SHIFT, (long)1);
+      ChartSetInteger(ChartID(), (ENUM_CHART_PROPERTY_INTEGER)CHART_SHIFT_SIZE, (long)MathMax(5, InpRightPadBars * 2));
      }
 
    IndicatorSetString(INDICATOR_SHORTNAME, "PBD Sniper v2 (" + IntegerToString(InpMinimumConfluence) + "/" +

@@ -555,23 +555,47 @@ void DeleteLevelObjects()
 
 void DeleteBoxObjects()
   {
-   string kill[] = {"BOX_FILL","BOX_BORDER","POC","TAG_POC"};
+   string kill[] = {"BOX_FILL","BOX_BORDER","POC","TAG_POC","BOX_STATS"};
    for(int k = 0; k < ArraySize(kill); k++)
       ObjectDelete(0, PREFIX + kill[k]);
    g_boxDrawn = false;
   }
 
-void DrawBox(const datetime t1,const datetime t2,const double pHigh,const double pLow,const double poc)
+void DrawBox(const datetime t1,const datetime t2,const double pHigh,const double pLow,const double poc,const string info)
   {
    if(!InpShowBox) return;
-   SetRect(PREFIX + "BOX_FILL", t1, pHigh, t2, pLow, InpBoxFillColor, true, 1, "PBD balance box");
-   SetRect(PREFIX + "BOX_BORDER", t1, pHigh, t2, pLow, InpBoxBorderColor, false, 2, "PBD balance box borders");
+   SetRect(PREFIX + "BOX_FILL", t1, pHigh, t2, pLow, InpBoxFillColor, true, 1, info);
+   SetRect(PREFIX + "BOX_BORDER", t1, pHigh, t2, pLow, InpBoxBorderColor, false, 2, info);
+   // stats line at the bottom-left inside the box: window/width verification aid
+   string st = PREFIX + "BOX_STATS";
+   if(ObjectFind(0, st) < 0)
+     {
+      ObjectCreate(0, st, OBJ_TEXT, 0, t1, pLow);
+      ObjectSetInteger(0, st, OBJPROP_ANCHOR, ANCHOR_LEFT_LOWER);
+      ObjectSetString(0, st, OBJPROP_FONT, "Consolas");
+      ObjectSetInteger(0, st, OBJPROP_FONTSIZE, 9);
+      ObjectSetInteger(0, st, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, st, OBJPROP_HIDDEN, true);
+     }
+   ObjectSetInteger(0, st, OBJPROP_TIME, t1);
+   ObjectSetDouble(0, st, OBJPROP_PRICE, pLow);
+   ObjectSetInteger(0, st, OBJPROP_COLOR, C'150,150,170');
+   ObjectSetString(0, st, OBJPROP_TEXT, info);
    if(InpShowPOC && poc > 0)
      {
       SetHLine("POC", poc, C'120,120,140', STYLE_DOT, 1, "POC (tick-volume approx)");
       PutTag("POC", poc, C'150,150,170', " POC " + DoubleToString(poc, _Digits));
      }
    g_boxDrawn = true;
+  }
+
+void DrawPreviewBox()
+  {
+   if(g_newestValid <= 0) return;
+   double wAtr = (g_newestHigh - g_newestLow) / MathMax(g_newestATR, _Point);
+   DrawBox(g_newestBoxStartTime, timeTag(), g_newestHigh, g_newestLow, g_newestPOC,
+           "BOX " + TimeToString(g_newestBoxStartTime, TIME_DATE | TIME_MINUTES) + " -> now  W " +
+           DoubleToString(wAtr, 2) + " ATR  T " + IntegerToString(g_newestTouches));
   }
 
 void DrawLevels(const SetupInfo &s)
@@ -651,7 +675,7 @@ void PanelRender(const string &rows[],const color &cols[])
   {
    PanelEnsure();
    int n = ArraySize(rows);
-   const int X0 = 22, Y0 = 34, LH = 16, W = 470;
+   const int X0 = 22, Y0 = 34, LH = 17, W = 560;
    string bg = PANEL_PREFIX + "BG";
    ObjectSetInteger(0, bg, OBJPROP_XSIZE, W);
    ObjectSetInteger(0, bg, OBJPROP_YSIZE, Y0 - 24 + n * LH + 12);
@@ -837,8 +861,8 @@ void RenderDashboardEmpty(const string headline)
   {
    string rows[];
    color  cols[];
-   ArrayResize(rows, 8);
-   ArrayResize(cols, 8);
+   ArrayResize(rows, 9);
+   ArrayResize(cols, 9);
    rows[0] = "PBD SNIPER v2  |  " + _Symbol + "  " + EnumToString((ENUM_TIMEFRAMES)_Period) +
              "  |  " + TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES);
    cols[0] = clrWhite;
@@ -856,8 +880,20 @@ void RenderDashboardEmpty(const string headline)
    cols[5] = C'120,130,150';
    rows[6] = " - session, spread and dedupe filters passed";
    cols[6] = C'120,130,150';
-   rows[7] = "Watch the box: a sweep into an edge + reclaim close is the sniper trigger.";
+   rows[7] = "Watch the box: sweep into an edge + reclaim close = trigger.";
    cols[7] = C'150,150,170';
+   if(g_newestValid > 0)
+     {
+      rows[8] = "BOX  H " + DoubleToString(g_newestHigh, _Digits) + "  L " + DoubleToString(g_newestLow, _Digits) +
+                "  W " + DoubleToString((g_newestHigh - g_newestLow) / MathMax(g_newestATR, _Point), 2) +
+                "xATR  touches " + IntegerToString(g_newestTouches) + "  (hover box: window)";
+      cols[8] = C'170,180,200';
+     }
+   else
+     {
+      rows[8] = "";
+      cols[8] = C'0,0,0';
+     }
    PanelRender(rows, cols);
   }
 
@@ -1234,7 +1270,10 @@ int OnCalculate(const int rates_total,const int prev_calculated,const datetime &
 
       if(showSetup)
         {
-         DrawBox(g_setup.boxStartTime, timeTag(), g_setup.boxHigh, g_setup.boxLow, g_setup.poc);
+         DrawBox(g_setup.boxStartTime, timeTag(), g_setup.boxHigh, g_setup.boxLow, g_setup.poc,
+                 "SETUP BOX " + TimeToString(g_setup.boxStartTime, TIME_DATE | TIME_MINUTES) + " -> now  W " +
+                 DoubleToString(g_setup.boxWidth / MathMax(g_setup.atr, _Point), 2) + " ATR  T " +
+                 IntegerToString(g_setup.touches));
          if(InpShowTradeLevels) DrawLevels(g_setup);
          else if(g_levelsDrawn) DeleteLevelObjects();
         }
@@ -1242,7 +1281,7 @@ int OnCalculate(const int rates_total,const int prev_calculated,const datetime &
         {
          if(g_levelsDrawn) DeleteLevelObjects();
          if(g_newestValid > 0)
-            DrawBox(g_newestBoxStartTime, timeTag(), g_newestHigh, g_newestLow, g_newestPOC);
+            DrawPreviewBox();
          else if(g_boxDrawn) DeleteBoxObjects();
         }
      }
@@ -1251,7 +1290,7 @@ int OnCalculate(const int rates_total,const int prev_calculated,const datetime &
       if(g_levelsDrawn) DeleteLevelObjects();
       if(g_newestValid > 0)
         {
-         DrawBox(g_newestBoxStartTime, timeTag(), g_newestHigh, g_newestLow, g_newestPOC);
+         DrawPreviewBox();
          status = "SCANNING - box visible, awaiting trigger";
         }
       else
